@@ -9,8 +9,10 @@ downloads/
 rtl_check_*.png
 rtl_validation/sample_*.png
 extraction_diagnosis/*.png
-extraction_diagnosis/AR*_page5_*.txt
-extraction_diagnosis/diagnosis_results.json
+extraction_diagnosis/*.txt
+extraction_diagnosis/*.json
 rapport_couverture.json
 journal_js.txt
 test_ar.db
+!extraction_diagnosis/final_diagnosis_report.md
+!extraction_diagnosis/extraction_diagnosis_report.md
