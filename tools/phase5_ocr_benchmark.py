@@ -69,19 +69,17 @@ def levenshtein(s1: str, s2: str) -> int:
     return prev[n]
 
 
-def line_cer(ref_line: str, hyp_line: str) -> float:
-    """Calcul CER après normalisation Unicode."""
-    r = "".join(normalize_for_wer(ref_line).split())
-    h = "".join(normalize_for_wer(hyp_line).split())
+def cer_on_normalized(ref_norm: str, hyp_norm: str) -> float:
+    """Calcul CER sur des chaînes déjà normalisées (évite la double normalisation)."""
+    r = "".join(ref_norm.split())
+    h = "".join(hyp_norm.split())
     if not r:
         return 0.0 if not h else 1.0
     return min(1.0, levenshtein(r, h) / len(r))
 
 
-def line_wer(ref_line: str, hyp_line: str) -> float:
-    """Calcul WER après normalisation Unicode et séparation ponctuation."""
-    r_words = normalize_for_wer(ref_line).split()
-    h_words = normalize_for_wer(hyp_line).split()
+def wer_on_words(r_words: List[str], h_words: List[str]) -> float:
+    """Calcul WER sur des listes de mots déjà normalisés."""
     if not r_words:
         return 0.0 if not h_words else 1.0
     n, m = len(r_words), len(h_words)
@@ -97,63 +95,106 @@ def line_wer(ref_line: str, hyp_line: str) -> float:
     return min(1.0, dp[n][m] / len(r_words))
 
 
-def evaluate_ground_truth_matching(gt_lines: List[str], ocr_full_text: str) -> Tuple[float, float]:
+def evaluate_ground_truth_matching(gt_lines: List[str], ocr_full_text: str) -> Tuple[float, float, float]:
     """
-    Fix A1 : Alignement par fenêtre glissante sur le flux de mots OCR concaténé.
-    Évite de pénaliser les moteurs dont les boîtes de détection découpent une phrase.
+    Alignement monotone par fenêtre glissante sur le flux OCR concaténé.
+    
+    Contrainte de monotonie : la fenêtre trouvée pour la ligne GT[i+1] doit
+    commencer APRÈS la fin de la fenêtre de GT[i]. Cela garantit qu'un texte
+    réordonné sera pénalisé, contrairement à une recherche libre.
+    
+    Retourne (avg_cer, avg_wer, order_error_rate) :
+    - avg_cer : CER moyen sur les lignes GT (normalisé)
+    - avg_wer : WER moyen sur les lignes GT (normalisé)  
+    - order_error_rate : fraction de lignes GT dont la meilleure fenêtre monotone
+      est significativement pire que la meilleure fenêtre libre (delta WER > 0.2),
+      indiquant un problème d'ordre de lecture dans la sortie OCR.
     """
     ocr_norm = normalize_for_wer(ocr_full_text)
     ocr_words = ocr_norm.split()
     if not ocr_words:
-        return 1.0, 1.0
-        
-    total_cer = 0.0
-    total_wer = 0.0
+        return 1.0, 1.0, 0.0
+    
     M = len(ocr_words)
     
+    # Pré-normaliser toutes les lignes GT
+    gt_normalized = []
     for ref_line in gt_lines:
         ref_norm = normalize_for_wer(ref_line)
         r_words = ref_norm.split()
+        if r_words:
+            gt_normalized.append((ref_norm, r_words))
+    
+    if not gt_normalized:
+        return 1.0, 1.0, 0.0
+    
+    def find_best_window(r_words, ref_norm, search_start, search_end):
+        """Trouve la meilleure fenêtre dans [search_start, search_end) du flux OCR."""
         N = len(r_words)
-        if N == 0:
-            continue
-            
         best_wer = 1.0
         best_cer = 1.0
+        best_pos = search_start  # position de début de la meilleure fenêtre
+        best_end = search_start  # position de fin de la meilleure fenêtre
         
-        # Fenêtre glissante de tailles N-2 à N+3 autour de la longueur de référence
         min_w = max(1, N - 2)
-        max_w = min(M + 1, N + 4)
+        max_w = min(search_end - search_start + 1, N + 4)
         
         for w_size in range(min_w, max_w):
-            for start in range(0, M - w_size + 1):
+            for start in range(search_start, search_end - w_size + 1):
                 window_words = ocr_words[start:start + w_size]
-                hyp_window = " ".join(window_words)
                 
-                # WER rapide
-                dp = [[0] * (w_size + 1) for _ in range(N + 1)]
-                for i in range(N + 1): dp[i][0] = i
-                for j in range(w_size + 1): dp[0][j] = j
-                for i in range(1, N + 1):
-                    for j in range(1, w_size + 1):
-                        cost = 0 if r_words[i - 1] == window_words[j - 1] else 1
-                        dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
-                w_val = min(1.0, dp[N][w_size] / N)
+                w_val = wer_on_words(r_words, window_words)
                 
                 if w_val < best_wer:
                     best_wer = w_val
-                    best_cer = line_cer(ref_line, hyp_window)
+                    hyp_norm = " ".join(window_words)
+                    best_cer = cer_on_normalized(ref_norm, hyp_norm)
+                    best_pos = start
+                    best_end = start + w_size
                     if best_wer == 0.0:
                         break
             if best_wer == 0.0:
                 break
-                
-        total_wer += best_wer
-        total_cer += best_cer
         
-    avg_cer = total_cer / len(gt_lines) if gt_lines else 1.0
-    avg_wer = total_wer / len(gt_lines) if gt_lines else 1.0
-    return avg_cer, avg_wer
+        return best_wer, best_cer, best_pos, best_end
+    
+    # === Phase 1 : Alignement monotone (contraint) ===
+    # La fenêtre pour GT[i+1] doit commencer >= fin de la fenêtre de GT[i]
+    monotone_cursor = 0  # position minimale de début pour la prochaine ligne
+    total_wer_mono = 0.0
+    total_cer_mono = 0.0
+    mono_positions = []
+    
+    for ref_norm, r_words in gt_normalized:
+        wer, cer, pos, end = find_best_window(r_words, ref_norm, monotone_cursor, M)
+        total_wer_mono += wer
+        total_cer_mono += cer
+        mono_positions.append((pos, end, wer))
+        # Avancer le curseur : prochaine ligne doit commencer après cette fenêtre
+        # On permet un léger chevauchement (jusqu'à 2 mots) pour les cas de
+        # découpage OCR imprécis, mais on avance au minimum de 1 mot.
+        monotone_cursor = max(monotone_cursor + 1, end - 2)
+    
+    # === Phase 2 : Alignement libre (non contraint) pour détecter les erreurs d'ordre ===
+    total_wer_free = 0.0
+    order_violations = 0
+    
+    for i, (ref_norm, r_words) in enumerate(gt_normalized):
+        wer_free, _, _, _ = find_best_window(r_words, ref_norm, 0, M)
+        total_wer_free += wer_free
+        
+        # Une violation d'ordre est détectée si la recherche libre trouve un WER
+        # significativement meilleur que la recherche monotone (delta > 0.2)
+        mono_wer = mono_positions[i][2]
+        if wer_free < mono_wer - 0.2:
+            order_violations += 1
+    
+    n_lines = len(gt_normalized)
+    avg_cer = total_cer_mono / n_lines
+    avg_wer = total_wer_mono / n_lines
+    order_error_rate = order_violations / n_lines
+    
+    return avg_cer, avg_wer, order_error_rate
 
 
 def evaluate_numbers(expected_numbers: List[str], extracted_text: str) -> float:
@@ -357,10 +398,12 @@ def run_benchmark():
             "ar_cer_list": [],
             "ar_num_list": [],
             "ar_time_list": [],
+            "ar_order_list": [],
             "fr_wer_list": [],
             "fr_cer_list": [],
             "fr_num_list": [],
             "fr_time_list": [],
+            "fr_order_list": [],
             "pages": []
         }
         
@@ -375,13 +418,14 @@ def run_benchmark():
             gt = ground_truth[doc_id]
             extracted_text, elapsed = ar_results.get(doc_id, ("", 0.0))
             
-            cer, wer = evaluate_ground_truth_matching(gt["lines_ground_truth"], extracted_text)
+            cer, wer, order_err = evaluate_ground_truth_matching(gt["lines_ground_truth"], extracted_text)
             num_acc = evaluate_numbers(gt.get("key_numbers", []), extracted_text)
             
             engine_stats["ar_wer_list"].append(wer)
             engine_stats["ar_cer_list"].append(cer)
             engine_stats["ar_num_list"].append(num_acc)
             engine_stats["ar_time_list"].append(elapsed)
+            engine_stats["ar_order_list"].append(order_err)
             
             engine_stats["pages"].append({
                 "id": doc_id,
@@ -389,11 +433,12 @@ def run_benchmark():
                 "era": era,
                 "wer": wer,
                 "cer": cer,
+                "order_error": order_err,
                 "num_accuracy": num_acc,
                 "elapsed": elapsed,
                 "sample": extracted_text[:120].replace("\n", " ") if extracted_text else "[VIDE]"
             })
-            precision_txt = f"WER: {wer*100:5.1f}% (Précision: {(1-wer)*100:5.1f}%) | CER: {cer*100:5.1f}% | Nombres: {num_acc*100:5.1f}% | {elapsed:4.2f}s"
+            precision_txt = f"WER: {wer*100:5.1f}% (Précision: {(1-wer)*100:5.1f}%) | CER: {cer*100:5.1f}% | Nombres: {num_acc*100:5.1f}% | Ordre: {(1-order_err)*100:5.1f}% | {elapsed:4.2f}s"
             print(f"    [{doc_id:<5} AR {era:<10}] {precision_txt}", flush=True)
             
         # Traitement par lot : Français
@@ -405,13 +450,14 @@ def run_benchmark():
             gt = ground_truth[doc_id]
             extracted_text, elapsed = fr_results.get(doc_id, ("", 0.0))
             
-            cer, wer = evaluate_ground_truth_matching(gt["lines_ground_truth"], extracted_text)
+            cer, wer, order_err = evaluate_ground_truth_matching(gt["lines_ground_truth"], extracted_text)
             num_acc = evaluate_numbers(gt.get("key_numbers", []), extracted_text)
             
             engine_stats["fr_wer_list"].append(wer)
             engine_stats["fr_cer_list"].append(cer)
             engine_stats["fr_num_list"].append(num_acc)
             engine_stats["fr_time_list"].append(elapsed)
+            engine_stats["fr_order_list"].append(order_err)
             
             engine_stats["pages"].append({
                 "id": doc_id,
@@ -419,11 +465,12 @@ def run_benchmark():
                 "era": era,
                 "wer": wer,
                 "cer": cer,
+                "order_error": order_err,
                 "num_accuracy": num_acc,
                 "elapsed": elapsed,
                 "sample": extracted_text[:120].replace("\n", " ") if extracted_text else "[VIDE]"
             })
-            precision_txt = f"WER: {wer*100:5.1f}% (Précision: {(1-wer)*100:5.1f}%) | CER: {cer*100:5.1f}% | Nombres: {num_acc*100:5.1f}% | {elapsed:4.2f}s"
+            precision_txt = f"WER: {wer*100:5.1f}% (Précision: {(1-wer)*100:5.1f}%) | CER: {cer*100:5.1f}% | Nombres: {num_acc*100:5.1f}% | Ordre: {(1-order_err)*100:5.1f}% | {elapsed:4.2f}s"
             print(f"    [{doc_id:<5} FR {era:<10}] {precision_txt}", flush=True)
             
         all_engine_results.append(engine_stats)
@@ -436,11 +483,13 @@ def run_benchmark():
         ar_cer = sum(s["ar_cer_list"]) / len(s["ar_cer_list"])
         ar_num = sum(s["ar_num_list"]) / len(s["ar_num_list"])
         ar_time = sum(s["ar_time_list"]) / len(s["ar_time_list"])
+        ar_order = sum(s["ar_order_list"]) / len(s["ar_order_list"])
         
         fr_wer = sum(s["fr_wer_list"]) / len(s["fr_wer_list"])
         fr_cer = sum(s["fr_cer_list"]) / len(s["fr_cer_list"])
         fr_num = sum(s["fr_num_list"]) / len(s["fr_num_list"])
         fr_time = sum(s["fr_time_list"]) / len(s["fr_time_list"])
+        fr_order = sum(s["fr_order_list"]) / len(s["fr_order_list"])
         
         speed_ar = max(0.1, min(1.0, 1.0 / (1.0 + ar_time)))
         speed_fr = max(0.1, min(1.0, 1.0 / (1.0 + fr_time)))
@@ -456,12 +505,14 @@ def run_benchmark():
             "ar_cer": ar_cer,
             "ar_num": ar_num,
             "ar_time": ar_time,
+            "ar_order": (1.0 - ar_order),
             "ar_score": score_ar,
             "fr_precision_wer": (1.0 - fr_wer),
             "fr_wer": fr_wer,
             "fr_cer": fr_cer,
             "fr_num": fr_num,
             "fr_time": fr_time,
+            "fr_order": (1.0 - fr_order),
             "fr_score": score_fr
         })
         
@@ -469,13 +520,13 @@ def run_benchmark():
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump({"summary": summary, "details": all_engine_results}, f, indent=2, ensure_ascii=False)
         
-    print("\n" + "=" * 115, flush=True)
-    print("BILAN COMPARATIF FINAL DU BANC D'ESSAI OCR MULTI-MOTEURS (PHASE 5 — RECALIBRÉ & VALIDÉ)", flush=True)
-    print("=" * 115, flush=True)
-    print(f"{'Moteur':<20} | {'Backend':<14} | {'AR Précision':<12} | {'AR Nombres':<10} | {'AR Temps':<8} | {'FR Précision':<12} | {'FR Nombres':<10} | {'FR Temps':<8} | {'Score AR':<8} | {'Score FR':<8}", flush=True)
-    print("-" * 140, flush=True)
+    print("\n" + "=" * 150, flush=True)
+    print("BILAN COMPARATIF FINAL DU BANC D'ESSAI OCR MULTI-MOTEURS (PHASE 5 — ALIGNEMENT MONOTONE)", flush=True)
+    print("=" * 150, flush=True)
+    print(f"{'Moteur':<20} | {'Backend':<14} | {'AR Précision':<12} | {'AR Nombres':<10} | {'AR Ordre':<9} | {'AR Temps':<8} | {'FR Précision':<12} | {'FR Nombres':<10} | {'FR Ordre':<9} | {'FR Temps':<8} | {'Score AR':<8} | {'Score FR':<8}", flush=True)
+    print("-" * 165, flush=True)
     for st in summary:
-        print(f"{st['engine']:<20} | {st['backend']:<14} | {st['ar_precision_wer']*100:6.1f}%     | {st['ar_num']*100:8.1f}% | {st['ar_time']:6.2f}s | {st['fr_precision_wer']*100:6.1f}%     | {st['fr_num']*100:8.1f}% | {st['fr_time']:6.2f}s | {st['ar_score']*100:6.1f}% | {st['fr_score']*100:6.1f}%", flush=True)
+        print(f"{st['engine']:<20} | {st['backend']:<14} | {st['ar_precision_wer']*100:6.1f}%     | {st['ar_num']*100:8.1f}% | {st['ar_order']*100:6.1f}%  | {st['ar_time']:6.2f}s | {st['fr_precision_wer']*100:6.1f}%     | {st['fr_num']*100:8.1f}% | {st['fr_order']*100:6.1f}%  | {st['fr_time']:6.2f}s | {st['ar_score']*100:6.1f}% | {st['fr_score']*100:6.1f}%", flush=True)
 
     return summary
 
