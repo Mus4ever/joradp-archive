@@ -1,0 +1,12 @@
+# Runtime HTTP and HTML parsing. Pinned for reproducible installs.
+httpx==0.28.1
+truststore==0.10.4
+beautifulsoup4==4.13.4
+lxml==5.4.0
+
+# Native PDF text extraction (no text generation or translation).
+PyMuPDF==1.26.1
+
+# CLI ergonomics and tests.
+typer==0.16.0
+pytest==8.4.0
