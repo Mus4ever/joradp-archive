@@ -193,7 +193,7 @@ class Phase4Extractor:
         # Assembler tout le document dans l'ordre logique
         final_blocks = header_blocks + segments + footer_blocks
         
-        # Nettoyage et suppression des doublons consécutifs exacts
+        # Nettoyage et suppression des doublons consécutifs exacts et shadow-text intra-ligne
         extracted_paragraphs = []
         prev_text = ""
         duplicate_detected = False
@@ -205,6 +205,20 @@ class Phase4Extractor:
             if clean_t == prev_text:
                 duplicate_detected = True
                 continue # Évite les doubles couches de texte superposées
+                
+            # Nettoyage shadow-text intra-bloc (ex: 'اﺗﻔﺎﻗﻴﺔ اﻧﺸﺎء اﺗﻔﺎﻗﻴﺔ اﻧﺸﺎء' -> 'اﺗﻔﺎﻗﻴﺔ اﻧﺸﺎء')
+            b_lines = []
+            for line in clean_t.splitlines():
+                l_str = line.strip()
+                words = l_str.split()
+                n = len(words)
+                if n >= 2 and n % 2 == 0 and words[:n//2] == words[n//2:]:
+                    b_lines.append(" ".join(words[:n//2]))
+                    duplicate_detected = True
+                else:
+                    b_lines.append(l_str)
+            clean_t = "\n".join(b_lines)
+            
             extracted_paragraphs.append(clean_t)
             prev_text = clean_t
             

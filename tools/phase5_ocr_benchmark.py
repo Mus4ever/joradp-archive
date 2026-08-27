@@ -262,10 +262,26 @@ def run_paddle_batch(items: List[Dict[str, Any]], langue: str) -> Dict[str, Tupl
     paths_json = json.dumps(paths_dict)
     
     script = f"""
-import sys, os, time, json
+import sys, os, time, json, re
 from paddleocr import PaddleOCR
 
 sys.stdout.reconfigure(encoding='utf-8')
+
+def fix_paddle_arabic_bidi(line: str) -> str:
+    if not line: return ""
+    tokens = line.split()
+    fixed_tokens = []
+    for tok in tokens:
+        parts = re.split(r'([\d\\u0660-\\u0669]+(?:[\\.\\-/][\\d\\u0660-\\u0669]+)*|[a-zA-Z]+)', tok)
+        fixed_parts = []
+        for p in parts:
+            if not p: continue
+            if re.match(r'^[\\d\\u0660-\\u0669]+(?:[\\.\\-/][\\d\\u0660-\\u0669]+)*$', p) or re.match(r'^[a-zA-Z]+$', p):
+                fixed_parts.append(p)
+            else:
+                fixed_parts.append(p[::-1])
+        fixed_tokens.append("".join(fixed_parts))
+    return " ".join(fixed_tokens[::-1])
 
 if '{langue}' == 'AR':
     ocr = PaddleOCR(use_angle_cls=False, lang='ar', use_gpu=False, show_log=False)
@@ -284,9 +300,8 @@ for doc_id, img_path in imgs.items():
     if res and res[0]:
         for l in res[0]:
             txt = l[1][0]
-            # Pour l'arabe, PaddleOCR renvoie les caractères en flux LTR -> inverser pour obtenir le mot RTL correct
             if '{langue}' == 'AR':
-                txt = txt[::-1]
+                txt = fix_paddle_arabic_bidi(txt)
             lines.append(txt)
     results[doc_id] = {{"text": "\\n".join(lines), "time": round(t1 - t0, 4)}}
 
