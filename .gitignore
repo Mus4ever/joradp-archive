@@ -8,6 +8,7 @@ downloads/
 *.html
 *.png
 rtl_check_*.png
+rtl_validation/*.png
 rapport_couverture.json
 journal_js.txt
 test_ar.db
