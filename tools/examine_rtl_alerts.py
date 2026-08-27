@@ -34,13 +34,13 @@ def examine_rtl_alert(annee: int, numero: int, page_num: int = 7):
         print("=" * 80)
         print(f"Capture: rtl_content_AR{annee}{numero}_page{page_num+1}.png")
         print()
-        print("TEXTE EXTRAIT (500 premiers caractères):")
+        print("TEXTE EXTRAIT COMPLET:")
         print("-" * 80)
         
         # Configure UTF-8 pour l'affichage
         import sys
         sys.stdout.reconfigure(encoding='utf-8')
-        print(text[:500])
+        print(text)
         
         print()
         print("ANALYSE MANUELLE:")
