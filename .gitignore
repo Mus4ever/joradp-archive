@@ -5,10 +5,12 @@ data/
 reports/
 downloads/
 *.db
-*.html
 *.png
 rtl_check_*.png
-rtl_validation/*.png
+rtl_validation/sample_*.png
+extraction_diagnosis/*.png
+extraction_diagnosis/AR*_page5_*.txt
+extraction_diagnosis/diagnosis_results.json
 rapport_couverture.json
 journal_js.txt
 test_ar.db
