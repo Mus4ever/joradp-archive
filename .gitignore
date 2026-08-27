@@ -14,5 +14,3 @@ extraction_diagnosis/*.json
 rapport_couverture.json
 journal_js.txt
 test_ar.db
-!extraction_diagnosis/final_diagnosis_report.md
-!extraction_diagnosis/extraction_diagnosis_report.md
