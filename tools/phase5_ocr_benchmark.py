@@ -1,10 +1,10 @@
 """
-Banc d'essai OCR Multi-moteurs - Phase 5 (Isolation des processus & Mesure scientifique)
+Banc d'essai OCR Multi-moteurs - Phase 5 (Corrigé A1, A2, A3, A4 & Inversion RTL)
 Évalue les moteurs OCR majeurs sur 30 pages de test stratifiées :
-1. EasyOCR 1.7.2 (GPU CUDA - GTX 1660 Super)
-2. PaddleOCR 2.7.3 (PP-OCRv4 Multilingue)
-3. Tesseract 5.5.0 (CPU Référence officielle avec ara + fra)
-4. Surya OCR (GPU CUDA)
+1. Tesseract 5.5.0 (CPU Référence officielle avec ara + fra)
+2. EasyOCR 1.7.2 (GPU CUDA / Batch avec isolation)
+3. PaddleOCR 2.7.3 (PP-OCRv4 Multilingue / cls désactivé + inversion RTL pour AR)
+(Surya OCR exclu suite aux tests d'incompatibilité de détection sur scans JORADP)
 """
 
 import sys
@@ -12,6 +12,8 @@ import os
 import time
 import json
 import subprocess
+import unicodedata
+import re
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 
@@ -19,23 +21,48 @@ if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
 
+# -------------------------------------------------------------
+# Normalisation et métriques (Fix A1 & A2)
+# -------------------------------------------------------------
+
+ARABIC_ALEF_VARIANTS = re.compile(r'[إأآٱ]')
+ARABIC_DIACRITICS    = re.compile(r'[\u064B-\u065F\u0670]')
+ARABIC_PUNCT_GLUE    = re.compile(r'([،؛؟!\.,:\(\)«»\-])')
+
+
+def normalize_for_wer(text: str) -> str:
+    """
+    Normalisation linguistique stricte pour comparaison OCR :
+    - Forme Unicode NFC
+    - Unification des variantes d'Alef (إأآٱ -> ا)
+    - Suppression des harakat / diacritiques (\u064B-\u065F, \u0670)
+    - Séparation des signes de ponctuation collés aux mots
+    - Espaces multiples réduits
+    """
+    if not text:
+        return ""
+    text = unicodedata.normalize("NFC", text)
+    text = ARABIC_ALEF_VARIANTS.sub('ا', text)
+    text = ARABIC_DIACRITICS.sub('', text)
+    text = ARABIC_PUNCT_GLUE.sub(r' \1 ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
 def levenshtein(s1: str, s2: str) -> int:
-    """Algorithme de Levenshtein iteratif (pas recursif) pour eviter stack overflow."""
-    # Limite les chaines trop longues pour la vitesse (max 200 chars chacune)
-    s1, s2 = s1[:200], s2[:200]
+    """Algorithme de Levenshtein itératif robuste et rapide."""
+    s1, s2 = s1[:250], s2[:250]
     if len(s1) < len(s2):
         s1, s2 = s2, s1
     m, n = len(s1), len(s2)
     if n == 0:
         return m
-    # Utilise un seul tableau 1D pour la performance memoire
     prev = list(range(n + 1))
     for i, c1 in enumerate(s1):
         curr = [i + 1] + [0] * n
         for j, c2 in enumerate(s2):
             curr[j + 1] = min(
-                prev[j + 1] + 1,   # suppression
-                curr[j] + 1,       # insertion
+                prev[j + 1] + 1,      # suppression
+                curr[j] + 1,          # insertion
                 prev[j] + (c1 != c2)  # substitution
             )
         prev = curr
@@ -43,16 +70,18 @@ def levenshtein(s1: str, s2: str) -> int:
 
 
 def line_cer(ref_line: str, hyp_line: str) -> float:
-    r = "".join(ref_line.split())
-    h = "".join(hyp_line.split())
+    """Calcul CER après normalisation Unicode."""
+    r = "".join(normalize_for_wer(ref_line).split())
+    h = "".join(normalize_for_wer(hyp_line).split())
     if not r:
         return 0.0 if not h else 1.0
     return min(1.0, levenshtein(r, h) / len(r))
 
 
 def line_wer(ref_line: str, hyp_line: str) -> float:
-    r_words = ref_line.split()
-    h_words = hyp_line.split()
+    """Calcul WER après normalisation Unicode et séparation ponctuation."""
+    r_words = normalize_for_wer(ref_line).split()
+    h_words = normalize_for_wer(hyp_line).split()
     if not r_words:
         return 0.0 if not h_words else 1.0
     n, m = len(r_words), len(h_words)
@@ -69,23 +98,58 @@ def line_wer(ref_line: str, hyp_line: str) -> float:
 
 
 def evaluate_ground_truth_matching(gt_lines: List[str], ocr_full_text: str) -> Tuple[float, float]:
-    ocr_lines = [l.strip() for l in ocr_full_text.splitlines() if l.strip()]
-    if not ocr_lines:
+    """
+    Fix A1 : Alignement par fenêtre glissante sur le flux de mots OCR concaténé.
+    Évite de pénaliser les moteurs dont les boîtes de détection découpent une phrase.
+    """
+    ocr_norm = normalize_for_wer(ocr_full_text)
+    ocr_words = ocr_norm.split()
+    if not ocr_words:
         return 1.0, 1.0
         
     total_cer = 0.0
     total_wer = 0.0
+    M = len(ocr_words)
     
     for ref_line in gt_lines:
-        best_cer = 1.0
+        ref_norm = normalize_for_wer(ref_line)
+        r_words = ref_norm.split()
+        N = len(r_words)
+        if N == 0:
+            continue
+            
         best_wer = 1.0
-        for hyp_line in ocr_lines:
-            cer = line_cer(ref_line, hyp_line)
-            if cer < best_cer:
-                best_cer = cer
-                best_wer = line_wer(ref_line, hyp_line)
-        total_cer += best_cer
+        best_cer = 1.0
+        
+        # Fenêtre glissante de tailles N-2 à N+3 autour de la longueur de référence
+        min_w = max(1, N - 2)
+        max_w = min(M + 1, N + 4)
+        
+        for w_size in range(min_w, max_w):
+            for start in range(0, M - w_size + 1):
+                window_words = ocr_words[start:start + w_size]
+                hyp_window = " ".join(window_words)
+                
+                # WER rapide
+                dp = [[0] * (w_size + 1) for _ in range(N + 1)]
+                for i in range(N + 1): dp[i][0] = i
+                for j in range(w_size + 1): dp[0][j] = j
+                for i in range(1, N + 1):
+                    for j in range(1, w_size + 1):
+                        cost = 0 if r_words[i - 1] == window_words[j - 1] else 1
+                        dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+                w_val = min(1.0, dp[N][w_size] / N)
+                
+                if w_val < best_wer:
+                    best_wer = w_val
+                    best_cer = line_cer(ref_line, hyp_window)
+                    if best_wer == 0.0:
+                        break
+            if best_wer == 0.0:
+                break
+                
         total_wer += best_wer
+        total_cer += best_cer
         
     avg_cer = total_cer / len(gt_lines) if gt_lines else 1.0
     avg_wer = total_wer / len(gt_lines) if gt_lines else 1.0
@@ -93,6 +157,7 @@ def evaluate_ground_truth_matching(gt_lines: List[str], ocr_full_text: str) -> T
 
 
 def evaluate_numbers(expected_numbers: List[str], extracted_text: str) -> float:
+    """Vérifie l'exactitude d'extraction des chiffres clés et numéros de décret."""
     if not expected_numbers:
         return 1.0
     found = 0
@@ -105,162 +170,146 @@ def evaluate_numbers(expected_numbers: List[str], extracted_text: str) -> float:
 
 
 # -------------------------------------------------------------
-# Workers isolés par sous-processus
+# Workers en mode Batch (Fix A3 & A4)
 # -------------------------------------------------------------
 
-def run_tesseract_worker(image_path: str, langue: str) -> Tuple[str, float]:
+def run_tesseract_batch(items: List[Dict[str, Any]], langue: str) -> Dict[str, Tuple[str, float]]:
+    """Worker batch Tesseract (CPU Référence)."""
+    paths_dict = {item["id"]: item["image_path"] for item in items}
+    paths_json = json.dumps(paths_dict)
+    
     script = f"""
-import sys, os, time, pytesseract
+import sys, os, time, json, pytesseract
 from PIL import Image
 
 sys.stdout.reconfigure(encoding='utf-8')
 os.environ['TESSDATA_PREFIX'] = os.path.abspath('tessdata')
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
-img = Image.open(r'{image_path}')
 lang_code = 'ara' if '{langue}' == 'AR' else 'fra'
 config = '--oem 1 --psm 3'
 
-t0 = time.perf_counter()
-txt = pytesseract.image_to_string(img, lang=lang_code, config=config)
-t1 = time.perf_counter()
+imgs = json.loads({json.dumps(paths_json)})
+results = {{}}
 
-print(f"TIME:{{t1-t0:.4f}}")
-print("---OUTPUT---")
-sys.stdout.write(txt)
+for doc_id, img_path in imgs.items():
+    img = Image.open(img_path)
+    t0 = time.perf_counter()
+    txt = pytesseract.image_to_string(img, lang=lang_code, config=config)
+    t1 = time.perf_counter()
+    results[doc_id] = {{"text": txt, "time": round(t1 - t0, 4)}}
+
+print("---JSON---")
+sys.stdout.write(json.dumps(results, ensure_ascii=False))
 """
     env = dict(os.environ, PYTHONIOENCODING='utf-8')
-    res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=120)
-    if res.returncode != 0 or not res.stdout:
-        return "", 0.0
-    parts = res.stdout.split("---OUTPUT---")
-    try:
-        time_str = parts[0].split("TIME:")[-1].strip().split("\n")[0]
-        elapsed = float(time_str)
-        text = parts[1] if len(parts) > 1 else ""
-        return text, elapsed
-    except Exception:
-        return "", 0.0
+    res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=600)
+    if "---JSON---" not in res.stdout:
+        print(f"[ERREUR Tesseract] {res.stderr[:300]}")
+        return {item["id"]: ("", 0.0) for item in items}
+    json_str = res.stdout.split("---JSON---")[1].strip()
+    data = json.loads(json_str)
+    return {k: (v["text"], v["time"]) for k, v in data.items()}
 
 
-def run_easyocr_worker(image_path: str, langue: str) -> Tuple[str, float]:
+def run_easyocr_batch(items: List[Dict[str, Any]], langue: str) -> Dict[str, Tuple[str, float]]:
+    """Worker batch EasyOCR (Fix A4 : CUDA nettoyé, Reader instancié UNE fois, mode batch)."""
+    paths_dict = {item["id"]: item["image_path"] for item in items}
+    paths_json = json.dumps(paths_dict)
+    
     script = f"""
-import sys, os, time, easyocr, torch
-
+import sys, os, time, json
 sys.stdout.reconfigure(encoding='utf-8')
+
+# Fix A4: Nettoyage CUDA_VISIBLE_DEVICES
+os.environ.pop('CUDA_VISIBLE_DEVICES', None)
+import torch, easyocr
+
 use_gpu = torch.cuda.is_available()
+dev_str = f"GPU: {{torch.cuda.get_device_name(0)}}" if use_gpu else "CPU"
+print(f"[EasyOCR Device] {{dev_str}}", flush=True)
+
 langs = ['ar', 'en'] if '{langue}' == 'AR' else ['fr', 'en']
 
+# Fix A4: Chargement UNIQUE du modèle
 reader = easyocr.Reader(langs, gpu=use_gpu, verbose=False)
 
-t0 = time.perf_counter()
-res = reader.readtext(r'{image_path}', detail=0)
-t1 = time.perf_counter()
+imgs = json.loads({json.dumps(paths_json)})
+results = {{}}
 
-print(f"TIME:{{t1-t0:.4f}}")
-print("---OUTPUT---")
-sys.stdout.write("\\n".join(res))
+for doc_id, img_path in imgs.items():
+    t0 = time.perf_counter()
+    res = reader.readtext(img_path, detail=0)
+    t1 = time.perf_counter()
+    results[doc_id] = {{"text": "\\n".join(res), "time": round(t1 - t0, 4)}}
+
+print("---JSON---")
+sys.stdout.write(json.dumps(results, ensure_ascii=False))
 """
     env = dict(os.environ, PYTHONIOENCODING='utf-8')
-    res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=120)
-    if res.returncode != 0 or not res.stdout:
-        return "", 0.0
-    parts = res.stdout.split("---OUTPUT---")
-    try:
-        time_str = parts[0].split("TIME:")[-1].strip().split("\n")[0]
-        elapsed = float(time_str)
-        text = parts[1] if len(parts) > 1 else ""
-        return text, elapsed
-    except Exception:
-        return "", 0.0
+    res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=600)
+    if "---JSON---" not in res.stdout:
+        print(f"[ERREUR EasyOCR] {res.stderr[:300]}")
+        return {item["id"]: ("", 0.0) for item in items}
+    json_str = res.stdout.split("---JSON---")[1].strip()
+    data = json.loads(json_str)
+    return {k: (v["text"], v["time"]) for k, v in data.items()}
 
 
-def run_paddle_worker(image_path: str, langue: str) -> Tuple[str, float]:
+def run_paddle_batch(items: List[Dict[str, Any]], langue: str) -> Dict[str, Tuple[str, float]]:
+    """Worker batch PaddleOCR (Fix A3 : use_angle_cls=False + inversion RTL des caractères pour AR)."""
+    paths_dict = {item["id"]: item["image_path"] for item in items}
+    paths_json = json.dumps(paths_dict)
+    
     script = f"""
-import sys, os, time
+import sys, os, time, json
 from paddleocr import PaddleOCR
 
 sys.stdout.reconfigure(encoding='utf-8')
-lang_code = 'ar' if '{langue}' == 'AR' else 'french'
-ocr = PaddleOCR(use_angle_cls=True, lang=lang_code, use_gpu=False, show_log=False)
 
-t0 = time.perf_counter()
-res = ocr.ocr(r'{image_path}', cls=True)
-t1 = time.perf_counter()
+if '{langue}' == 'AR':
+    ocr = PaddleOCR(use_angle_cls=False, lang='ar', use_gpu=False, show_log=False)
+else:
+    ocr = PaddleOCR(use_angle_cls=True, lang='french', use_gpu=False, show_log=False)
 
-lines = []
-if res and res[0]:
-    for l in res[0]:
-        lines.append(l[1][0])
+imgs = json.loads({json.dumps(paths_json)})
+results = {{}}
 
-print(f"TIME:{{t1-t0:.4f}}")
-print("---OUTPUT---")
-sys.stdout.write("\\n".join(lines))
+for doc_id, img_path in imgs.items():
+    t0 = time.perf_counter()
+    cls_flag = False if '{langue}' == 'AR' else True
+    res = ocr.ocr(img_path, cls=cls_flag)
+    t1 = time.perf_counter()
+    lines = []
+    if res and res[0]:
+        for l in res[0]:
+            txt = l[1][0]
+            # Pour l'arabe, PaddleOCR renvoie les caractères en flux LTR -> inverser pour obtenir le mot RTL correct
+            if '{langue}' == 'AR':
+                txt = txt[::-1]
+            lines.append(txt)
+    results[doc_id] = {{"text": "\\n".join(lines), "time": round(t1 - t0, 4)}}
+
+print("---JSON---")
+sys.stdout.write(json.dumps(results, ensure_ascii=False))
 """
     env = dict(os.environ, PYTHONIOENCODING='utf-8')
-    res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=120)
-    if res.returncode != 0 or not res.stdout:
-        return "", 0.0
-    parts = res.stdout.split("---OUTPUT---")
-    try:
-        time_str = parts[0].split("TIME:")[-1].strip().split("\n")[0]
-        elapsed = float(time_str)
-        text = parts[1] if len(parts) > 1 else ""
-        return text, elapsed
-    except Exception:
-        return "", 0.0
+    res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=600)
+    if "---JSON---" not in res.stdout:
+        print(f"[ERREUR PaddleOCR] {res.stderr[:300]}")
+        return {item["id"]: ("", 0.0) for item in items}
+    json_str = res.stdout.split("---JSON---")[1].strip()
+    data = json.loads(json_str)
+    return {k: (v["text"], v["time"]) for k, v in data.items()}
 
 
-def run_surya_worker(image_path: str, langue: str) -> Tuple[str, float]:
-    script = f"""
-import sys, os, time, warnings
-warnings.filterwarnings('ignore')
-from PIL import Image
-from surya.ocr import run_ocr
-from surya.model.detection.model import load_model as load_det_model, load_processor as load_det_processor
-from surya.model.recognition.model import load_model as load_rec_model
-from surya.model.recognition.processor import load_processor as load_rec_processor
-
-sys.stdout.reconfigure(encoding='utf-8')
-det_p, det_m = load_det_processor(), load_det_model()
-rec_p, rec_m = load_rec_processor(), load_rec_model()
-
-img = Image.open(r'{image_path}').convert('RGB')
-langs = ['ar'] if '{langue}' == 'AR' else ['fr']
-
-t0 = time.perf_counter()
-preds = run_ocr([img], [langs], det_m, det_p, rec_m, rec_p)
-t1 = time.perf_counter()
-
-lines = []
-if preds and preds[0].text_lines:
-    for l in preds[0].text_lines:
-        lines.append(l.text)
-
-print(f"TIME:{{t1-t0:.4f}}")
-print("---OUTPUT---")
-sys.stdout.write("\\n".join(lines))
-"""
-    env = dict(os.environ, PYTHONIOENCODING='utf-8')
-    try:
-        res = subprocess.run([sys.executable, "-c", script], capture_output=True, encoding='utf-8', errors='replace', env=env, timeout=180)
-    except subprocess.TimeoutExpired:
-        return "", 0.0
-    if res.returncode != 0 or not res.stdout or "---OUTPUT---" not in res.stdout:
-        return "", 0.0
-    parts = res.stdout.split("---OUTPUT---")
-    try:
-        time_str = parts[0].split("TIME:")[-1].strip().split("\n")[0]
-        elapsed = float(time_str)
-        text = parts[1] if len(parts) > 1 else ""
-        return text, elapsed
-    except Exception:
-        return "", 0.0
-
+# -------------------------------------------------------------
+# Exécution du Benchmark Complet
+# -------------------------------------------------------------
 
 def run_benchmark():
     print("=" * 95)
-    print("PHASE 5 — BANC D'ESSAI OCR MULTI-MOTEURS COMPARATIF (GPU & CPU)")
+    print("PHASE 5 — BANC D'ESSAI OCR MULTI-MOTEURS COMPARATIF (VERSION CORRIGÉE)")
     print("=" * 95)
     
     with open("benchmark/ground_truth.json", "r", encoding="utf-8") as f:
@@ -268,18 +317,20 @@ def run_benchmark():
     with open("benchmark/manifest.json", "r", encoding="utf-8") as f:
         manifest = json.load(f)
         
-    print(f"Dataset de référence : {len(manifest)} pages (15 Arabe + 15 Français)\n")
+    ar_items = [item for item in manifest if item["langue"] == "AR"]
+    fr_items = [item for item in manifest if item["langue"] == "FR"]
+    
+    print(f"Dataset de référence : {len(manifest)} pages ({len(ar_items)} Arabe + {len(fr_items)} Français)\n")
     
     engines = [
-        ("Tesseract 5.5.0", "CPU", run_tesseract_worker),
-        ("EasyOCR 1.7.2", "GPU (CUDA)", run_easyocr_worker),
-        ("PaddleOCR 2.7.3", "CPU/PP-OCR", run_paddle_worker),
-        ("Surya OCR 0.8.3", "GPU (CUDA fp16)", run_surya_worker),
+        ("Tesseract 5.5.0", "CPU", run_tesseract_batch),
+        ("EasyOCR 1.7.2", "GPU (CUDA)", run_easyocr_batch),
+        ("PaddleOCR 2.7.3", "CPU/PP-OCR", run_paddle_batch),
     ]
     
     all_engine_results = []
     
-    for engine_name, backend, worker_fn in engines:
+    for engine_name, backend, batch_fn in engines:
         print("-" * 95)
         print(f"ÉVALUATION EN COURS : {engine_name} [{backend}]")
         print("-" * 95)
@@ -300,36 +351,26 @@ def run_benchmark():
         
         start_engine_total = time.time()
         
-        for item in manifest:
+        # Traitement par lot : Arabe
+        print(f"  > Exécution du lot Arabe ({len(ar_items)} pages)...", flush=True)
+        ar_results = batch_fn(ar_items, "AR")
+        for item in ar_items:
             doc_id = item["id"]
-            langue = item["langue"]
-            img_path = item["image_path"]
             era = item["era"]
-            desc = item["desc"]
             gt = ground_truth[doc_id]
-            
-            try:
-                extracted_text, elapsed = worker_fn(img_path, langue)
-            except Exception:
-                extracted_text, elapsed = "", 0.0
+            extracted_text, elapsed = ar_results.get(doc_id, ("", 0.0))
             
             cer, wer = evaluate_ground_truth_matching(gt["lines_ground_truth"], extracted_text)
             num_acc = evaluate_numbers(gt.get("key_numbers", []), extracted_text)
             
-            if langue == "AR":
-                engine_stats["ar_wer_list"].append(wer)
-                engine_stats["ar_cer_list"].append(cer)
-                engine_stats["ar_num_list"].append(num_acc)
-                engine_stats["ar_time_list"].append(elapsed)
-            else:
-                engine_stats["fr_wer_list"].append(wer)
-                engine_stats["fr_cer_list"].append(cer)
-                engine_stats["fr_num_list"].append(num_acc)
-                engine_stats["fr_time_list"].append(elapsed)
-                
+            engine_stats["ar_wer_list"].append(wer)
+            engine_stats["ar_cer_list"].append(cer)
+            engine_stats["ar_num_list"].append(num_acc)
+            engine_stats["ar_time_list"].append(elapsed)
+            
             engine_stats["pages"].append({
                 "id": doc_id,
-                "langue": langue,
+                "langue": "AR",
                 "era": era,
                 "wer": wer,
                 "cer": cer,
@@ -337,14 +378,43 @@ def run_benchmark():
                 "elapsed": elapsed,
                 "sample": extracted_text[:120].replace("\n", " ") if extracted_text else "[VIDE]"
             })
-            
             precision_txt = f"WER: {wer*100:5.1f}% (Précision: {(1-wer)*100:5.1f}%) | CER: {cer*100:5.1f}% | Nombres: {num_acc*100:5.1f}% | {elapsed:4.2f}s"
-            print(f"  [{doc_id:<5} {langue} {era:<10}] {precision_txt}", flush=True)
+            print(f"    [{doc_id:<5} AR {era:<10}] {precision_txt}", flush=True)
+            
+        # Traitement par lot : Français
+        print(f"  > Exécution du lot Français ({len(fr_items)} pages)...", flush=True)
+        fr_results = batch_fn(fr_items, "FR")
+        for item in fr_items:
+            doc_id = item["id"]
+            era = item["era"]
+            gt = ground_truth[doc_id]
+            extracted_text, elapsed = fr_results.get(doc_id, ("", 0.0))
+            
+            cer, wer = evaluate_ground_truth_matching(gt["lines_ground_truth"], extracted_text)
+            num_acc = evaluate_numbers(gt.get("key_numbers", []), extracted_text)
+            
+            engine_stats["fr_wer_list"].append(wer)
+            engine_stats["fr_cer_list"].append(cer)
+            engine_stats["fr_num_list"].append(num_acc)
+            engine_stats["fr_time_list"].append(elapsed)
+            
+            engine_stats["pages"].append({
+                "id": doc_id,
+                "langue": "FR",
+                "era": era,
+                "wer": wer,
+                "cer": cer,
+                "num_accuracy": num_acc,
+                "elapsed": elapsed,
+                "sample": extracted_text[:120].replace("\n", " ") if extracted_text else "[VIDE]"
+            })
+            precision_txt = f"WER: {wer*100:5.1f}% (Précision: {(1-wer)*100:5.1f}%) | CER: {cer*100:5.1f}% | Nombres: {num_acc*100:5.1f}% | {elapsed:4.2f}s"
+            print(f"    [{doc_id:<5} FR {era:<10}] {precision_txt}", flush=True)
             
         all_engine_results.append(engine_stats)
-        print(f"Total temps moteur : {time.time() - start_engine_total:.1f}s\n", flush=True)
+        print(f"  Total temps moteur : {time.time() - start_engine_total:.1f}s\n", flush=True)
         
-    # Calcul des scores
+    # Calcul des scores finaux
     summary = []
     for s in all_engine_results:
         ar_wer = sum(s["ar_wer_list"]) / len(s["ar_wer_list"])
@@ -380,12 +450,12 @@ def run_benchmark():
             "fr_score": score_fr
         })
         
-    out_json = Path("reports") / "phase5_benchmark_results.json"
+    out_json = Path("reports") / "phase5_benchmark_results_final.json"
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump({"summary": summary, "details": all_engine_results}, f, indent=2, ensure_ascii=False)
         
     print("\n" + "=" * 115, flush=True)
-    print("BILAN COMPARATIF FINAL DU BANC D'ESSAI OCR MULTI-MOTEURS (PHASE 5)", flush=True)
+    print("BILAN COMPARATIF FINAL DU BANC D'ESSAI OCR MULTI-MOTEURS (PHASE 5 — RECALIBRÉ & VALIDÉ)", flush=True)
     print("=" * 115, flush=True)
     print(f"{'Moteur':<20} | {'Backend':<14} | {'AR Précision':<12} | {'AR Nombres':<10} | {'AR Temps':<8} | {'FR Précision':<12} | {'FR Nombres':<10} | {'FR Temps':<8} | {'Score AR':<8} | {'Score FR':<8}", flush=True)
     print("-" * 140, flush=True)
@@ -393,6 +463,7 @@ def run_benchmark():
         print(f"{st['engine']:<20} | {st['backend']:<14} | {st['ar_precision_wer']*100:6.1f}%     | {st['ar_num']*100:8.1f}% | {st['ar_time']:6.2f}s | {st['fr_precision_wer']*100:6.1f}%     | {st['fr_num']*100:8.1f}% | {st['fr_time']:6.2f}s | {st['ar_score']*100:6.1f}% | {st['fr_score']*100:6.1f}%", flush=True)
 
     return summary
+
 
 if __name__ == "__main__":
     run_benchmark()
