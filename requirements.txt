@@ -4,9 +4,5 @@ truststore==0.10.4
 beautifulsoup4==4.13.4
 lxml==5.4.0
 
-# Native PDF text extraction (no text generation or translation).
-PyMuPDF==1.26.1
-
-# CLI ergonomics and tests.
-typer==0.16.0
+# Tests du limiteur de débit.
 pytest==8.4.0

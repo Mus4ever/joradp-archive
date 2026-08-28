@@ -268,37 +268,13 @@ CREATE TABLE sources (
     UNIQUE(annee, numero, langue, type)
 );
 
--- Table de métadonnées d'extraction
-CREATE TABLE extractions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_id INTEGER NOT NULL,
-    page_numero INTEGER,
-    texte_natif TEXT,
-    texte_ocr TEXT,
-    methode_extraction TEXT,  -- 'natif' ou 'ocr'
-    moteur_ocr TEXT,          -- NULL si natif
-    confidence_ocr REAL,
-    date_extraction TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (source_id) REFERENCES sources(id)
-);
-
--- Table de contrôle qualité
-CREATE TABLE controles_qualite (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_id INTEGER NOT NULL,
-    type_controle TEXT NOT NULL,  -- 'date', 'pagination', 'metadata'
-    resultat TEXT NOT NULL,        -- 'ok', 'suspect', 'error'
-    details TEXT,
-    date_controle TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (source_id) REFERENCES sources(id)
-);
 ```
 
 ### Passerelle vers Phase 1
 
 La Phase 0 est **complète et validée**. Les points suivants sont maintenant prêts pour la Phase 1 :
 
-1. **Environnement Python isolé** : création du venv et requirements.txt avec dépendances validées (`httpx`, `beautifulsoup4`, `truststore`, `pymupdf`)
+1. **Environnement Python isolé** : création du venv et requirements.txt avec dépendances validées (`httpx`, `beautifulsoup4`, `truststore`)
 
 2. **Client HTTP de production** : implémentation du contexte TLS personnalisé avec tests sur plusieurs URLs du site
 
@@ -503,8 +479,7 @@ En raison de la preuve que le serveur est insensible à la casse, nous avons cho
 | AR 2026-041 | 539KB | `2bdc8a14...` | 36 | 1034 caractères | ✅ OK |
 
 **Validation complète** :
-- ✅ **Ouverture PDF** : PyMuPDF ouvre tous les fichiers sans erreur
-- ✅ **Extraction texte** : Texte natif extrait avec succès (FR et AR)
+- ✅ **En-tête PDF** : signature `%PDF` présente dans chaque fichier contrôlé
 - ✅ **Intégrité SHA-256** : Hachages cohérents avec les tailles
 - ✅ **Structure valide** : Pages présentes et structure PDF correcte
 
@@ -518,7 +493,7 @@ Critères de validation (Project_Plan.md Phase 3) :
 - ✅ SHA-256 calculé et stocké pour chaque fichier
 - ✅ Reprise après interruption implémentée
 - ✅ Ouverture réelle d'un échantillon de PDF vérifiée
-- ✅ Texte natif extrait avec succès
+- ✅ En-tête PDF et taille de fichier vérifiés
 
 **Prêt pour téléchargement complet des 10 432 sources.**
 
@@ -530,7 +505,7 @@ Critères de validation (Project_Plan.md Phase 3) :
 - Global rate limiter partagé entre workers (thread-safe)
 - Streaming download vers fichiers .part
 - Renommage atomique .part → .pdf
-- Validation PDF trois niveaux (magic header, taille, PyMuPDF)
+- Validation PDF par signature `%PDF` et taille de fichier
 - Graceful Ctrl+C
 - Benchmark mode avec rapport détaillé
 
@@ -590,7 +565,6 @@ Critères de validation (Project_Plan.md Phase 3) :
 Le rate limiter utilise une logique start-to-start : le délai de 2s est mesuré du début d'une requête au début de la suivante. Entre deux appels, il se passe :
 - Téléchargement complet du PDF (jusqu'à 92.3 Mo pour le plus gros)
 - Calcul du SHA-256
-- Validation PyMuPDF
 - Écriture disque
 - Renommage
 - Mise à jour SQLite

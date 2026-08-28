@@ -299,33 +299,37 @@ def discover_year(db_path: str = "joradp.db", annee: int = 2026, langue: str = "
 
 
 if __name__ == "__main__":
-    import sys
-    
-    # Test sur l'année 2026 français et 2026 arabe (disponible avec formulaire dynamique)
-    print("=" * 60)
-    print("Test de découverte - Index 2026 Français")
-    print("=" * 60)
-    count_fr = discover_year(annee=2026, langue="FR")
-    print(f"Total découvertes FR 2026: {count_fr}")
-    
-    print("\n" + "=" * 60)
-    print("Test de découverte - Index 2026 Arabe (disponible avec formulaire dynamique)")
-    print("=" * 60)
-    count_ar = discover_year(annee=2026, langue="AR")
-    print(f"Total découvertes AR 2026: {count_ar}")
-    
-    # Génère le rapport de couverture final
-    print("\n" + "=" * 60)
-    print("Rapport de couverture final")
-    print("=" * 60)
-    
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Découvre les PDF JORADP.")
+    parser.add_argument("--all", action="store_true", help="Parcourt FR 1962-2026 et AR 1964-2026.")
+    parser.add_argument("--year", type=int, help="Découvre une année unique.")
+    parser.add_argument("--language", choices=("FR", "AR"), help="Langue à utiliser avec --year.")
+    args = parser.parse_args()
+
+    if args.year is not None and args.language is None:
+        parser.error("--language est obligatoire avec --year.")
+    if args.year is not None and args.all:
+        parser.error("Utilisez soit --all, soit --year avec --language.")
+
     db = JoradpDatabase()
     with db:
-        report = db.get_coverage_report()
+        db.initialize_schema()
+
+    with JoradpClient() as client:
+        discoverer = JoradpDiscoverer(db, client)
+        if args.all:
+            print("Découverte complète : FR 1962-2026, AR 1964-2026")
+            for language, first_year in (("FR", 1962), ("AR", 1964)):
+                stats = discoverer.discover_range(language, first_year, 2026)
+                print(f"{language} : {stats['success']} années trouvées, {stats['failed']} en échec")
+        else:
+            year = args.year or 2026
+            language = args.language or "FR"
+            count = discoverer.discover_annual_index(language, year)
+            print(f"{language} {year} : {count} sources découvertes")
+
+        report = discoverer.generate_coverage_report()
         print(f"Total sources découvertes: {report['total_sources']}")
-        print(f"  Téléchargées: {report['downloaded']}")
-        print(f"  Validées: {report['validated']}")
-        print(f"  Erreurs: {report['errors']}")
-        print(f"\nCouverture par année/langue:")
-        for cov in report['coverage_by_year_langue']:
-            print(f"  {cov['annee']} {cov['langue']}: {cov['decouvert']} découvert, {cov['telecharge']} téléchargé, {cov['valide']} validé")
+        for cov in report["coverage_by_year_langue"]:
+            print(f"  {cov['annee']} {cov['langue']}: {cov['decouvert']} découvert")

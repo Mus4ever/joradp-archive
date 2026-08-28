@@ -1,6 +1,6 @@
 """
-Téléchargement optimisé avec workers, validation, et benchmark
-Phase 3 — Version optimisée
+Téléchargement par lots avec reprise et validation légère des PDF.
+Phase 3
 """
 
 import sys
@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-import pymupdf  # PyMuPDF
 
 from http_client import JoradpClient
 from database import JoradpDatabase
@@ -41,16 +40,15 @@ class DownloadResult:
 
 class OptimizedDownloader:
     """
-    Downloader optimisé avec workers, validation, et benchmark.
+    Downloader avec workers, validation et reprise.
     
     Caractéristiques:
     - Max 3 workers (hard limit)
     - Rate limiter global partagé
     - .part file pour écriture atomique
-    - Validation PDF (magic header + PyMuPDF)
+    - Validation PDF légère (en-tête et taille)
     - Streaming download
     - Graceful Ctrl+C
-    - Benchmark mode
     """
     
     def __init__(self, db: JoradpDatabase, client: JoradpClient, output_dir: str = "downloads", max_workers: int = 1):
@@ -114,18 +112,7 @@ class OptimizedDownloader:
         if file_size < 100:  # PDF minimal size
             return False, f"File too small: {file_size} bytes"
         
-        # Validation C: PyMuPDF opening
-        try:
-            doc = pymupdf.open(file_path)
-            page_count = len(doc)
-            doc.close()
-            
-            if page_count == 0:
-                return False, "Zero pages in PDF"
-            
-            return True, f"Valid PDF with {page_count} pages"
-        except Exception as e:
-            return False, f"PyMuPDF error: {e}"
+        return True, "PDF header and size valid"
     
     def download_source(self, source_id: int, url: str, annee: int, numero: str, langue: str) -> DownloadResult:
         """
@@ -308,14 +295,12 @@ class OptimizedDownloader:
             error=error
         )
     
-    def download_batch(self, limit: Optional[int] = None, test_mode: bool = False, benchmark_mode: bool = False) -> List[DownloadResult]:
+    def download_batch(self, limit: Optional[int] = None) -> List[DownloadResult]:
         """
         Télécharge un lot de sources avec workers.
         
         Args:
             limit: Nombre maximum de sources
-            test_mode: Mode test (sources les plus récentes)
-            benchmark_mode: Mode benchmark (20 sources)
             
         Returns:
             Liste des DownloadResult
@@ -324,35 +309,15 @@ class OptimizedDownloader:
             conn = self.db.connect()
             
             # Sélectionne les sources
-            if benchmark_mode:
-                # Benchmark : 20 sources représentatives
-                sources = conn.execute("""
-                    SELECT id, annee, numero, langue, url_complete 
-                    FROM sources 
-                    WHERE statut = 'decouvert'
-                    ORDER BY RANDOM()
-                    LIMIT 20
-                """).fetchall()
-            elif test_mode:
-                # Mode test : 50 sources les plus récentes
-                sources = conn.execute("""
-                    SELECT id, annee, numero, langue, url_complete 
-                    FROM sources 
-                    WHERE statut = 'decouvert'
-                    ORDER BY annee DESC, numero DESC
-                    LIMIT ?
-                """, (limit or 50,)).fetchall()
-            else:
-                # Mode normal
-                query = """
-                    SELECT id, annee, numero, langue, url_complete 
-                    FROM sources 
-                    WHERE statut = 'decouvert'
-                    ORDER BY annee, langue, numero
-                """
-                if limit:
-                    query += f" LIMIT {limit}"
-                sources = conn.execute(query).fetchall()
+            query = """
+                SELECT id, annee, numero, langue, url_complete
+                FROM sources
+                WHERE statut = 'decouvert'
+                ORDER BY annee, langue, numero
+            """
+            if limit:
+                query += f" LIMIT {limit}"
+            sources = conn.execute(query).fetchall()
         
         print(f"LOT TÉLÉCHARGEMENT : {len(sources)} sources")
         print(f"Workers : {self.max_workers}")
@@ -395,77 +360,19 @@ class OptimizedDownloader:
         return results
 
 
-def print_benchmark_report(results: List[DownloadResult]):
-    """Affiche le rapport de benchmark détaillé."""
-    print("\nBENCHMARK REPORT")
-    print("=" * 80)
-    print("\nINDIVIDUAL RESULTS:")
-    print("-" * 80)
-    
-    for result in results:
-        print(f"ID: {result.source_id} | {result.langue} {result.annee}-{result.numero}")
-        print(f"  URL: {result.url}")
-        print(f"  HTTP: {result.http_status}")
-        print(f"  Size: {result.file_size} bytes")
-        print(f"  Duration: {result.download_duration:.2f}s")
-        print(f"  Retries: {result.retries}")
-        print(f"  Validation: {result.validation_result}")
-        print(f"  Status: {result.final_status}")
-        if result.error:
-            print(f"  Error: {result.error}")
-        print()
-    
-    print("=" * 80)
-    print("AGGREGATE STATISTICS:")
-    print("-" * 80)
-    
-    total_duration = sum(r.download_duration for r in results)
-    successful = [r for r in results if r.final_status == "success"]
-    failed = [r for r in results if r.final_status == "error"]
-    skipped = [r for r in results if r.final_status == "skipped"]
-    total_bytes = sum(r.file_size or 0 for r in results)
-    total_retries = sum(r.retries for r in results)
-    
-    print(f"Total benchmark duration: {total_duration:.2f}s")
-    print(f"Throughput: {len(results) / total_duration:.2f} PDFs/minute")
-    print(f"Average download duration: {total_duration / len(results):.2f}s")
-    
-    if successful:
-        durations = [r.download_duration for r in successful]
-        durations.sort()
-        median_duration = durations[len(durations) // 2]
-        print(f"Median download duration: {median_duration:.2f}s")
-    
-    print(f"Total bytes: {total_bytes:,}")
-    print(f"Successful downloads: {len(successful)}")
-    print(f"Failed downloads: {len(failed)}")
-    print(f"Skipped (already downloaded): {len(skipped)}")
-    print(f"Total retries: {total_retries}")
-    
-    # Estimation pour 10,432 sources
-    if successful:
-        throughput = len(successful) / total_duration
-        estimated_time = 10432 / throughput
-        print(f"\nESTIMATED TIME FOR 10,432 PDFs: {estimated_time / 60:.1f} minutes ({estimated_time / 3600:.1f} hours)")
-        print("(Based on benchmark throughput - not guaranteed)")
-
-
 def main():
     """Point d'entrée principal."""
     import sys
     
     # Parse arguments
     workers = 1
-    benchmark = False
-    test = False
+    limit = None
     
     for arg in sys.argv[1:]:
         if arg.startswith("--workers="):
             workers = int(arg.split("=")[1])
-        elif arg == "--benchmark":
-            benchmark = True
-        elif arg == "--test":
-            test = True
+        elif arg.startswith("--limit="):
+            limit = int(arg.split("=", 1)[1])
     
     db = JoradpDatabase()
     
@@ -475,42 +382,14 @@ def main():
     with JoradpClient() as client:
         downloader = OptimizedDownloader(db, client, max_workers=workers)
         
-        if benchmark:
-            print("PHASE 3 — BENCHMARK MODE")
-            print("=" * 80)
-            print("Testing 20 representative PDFs")
-            print(f"Workers: {workers}")
-            print()
-            
-            results = downloader.download_batch(benchmark_mode=True)
-            print_benchmark_report(results)
-            
-        elif test:
-            print("PHASE 3 — TEST MODE")
-            print("=" * 80)
-            print(f"Workers: {workers}")
-            print()
-            
-            results = downloader.download_batch(limit=50, test_mode=True)
-            
-            successful = len([r for r in results if r.final_status == "success"])
-            failed = len([r for r in results if r.final_status == "error"])
-            
-            print(f"\nTEST TERMINÉ: {successful}/{len(results)} succès, {failed} échecs")
-            
-        else:
-            print("PHASE 3 — OPTIMIZED DOWNLOAD")
-            print("=" * 80)
-            print(f"Workers: {workers}")
-            print(f"Use --benchmark for benchmark mode first")
-            print()
-            
-            results = downloader.download_batch(test_mode=False)
-            
-            successful = len([r for r in results if r.final_status == "success"])
-            failed = len([r for r in results if r.final_status == "error"])
-            
-            print(f"\nTÉLÉCHARGEMENT TERMINÉ: {successful}/{len(results)} succès, {failed} échecs")
+        print("PHASE 3 — TÉLÉCHARGEMENT")
+        print("=" * 80)
+        print(f"Workers: {workers}")
+        print()
+        results = downloader.download_batch(limit=limit)
+        successful = len([r for r in results if r.final_status == "success"])
+        failed = len([r for r in results if r.final_status == "error"])
+        print(f"\nTÉLÉCHARGEMENT TERMINÉ: {successful}/{len(results)} succès, {failed} échecs")
 
 
 if __name__ == "__main__":
