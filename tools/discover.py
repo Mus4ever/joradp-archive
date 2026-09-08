@@ -151,40 +151,6 @@ class JoradpDiscoverer:
         
         return sources
     
-    def parse_historical_index(self, html_content: str, langue: str, annee: int, numero: str) -> Dict[str, Any]:
-        """
-        Extrait les informations depuis une page historique _Pag1.htm.
-        
-        Args:
-            html_content: Contenu HTML de la page historique
-            langue: 'FR' ou 'AR'
-            annee: Année du numéro
-            numero: Numéro du JO
-            
-        Returns:
-            Dictionnaire avec l'URL de l'index et le nombre de pages
-        """
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Détermine la racine historique selon l'année
-        if annee <= 1983:
-            base_path = "Jo6283"
-        else:
-            base_path = "Jo8499"
-        
-        # Construit l'URL de l'index historique
-        langue_prefix = "A" if langue == "AR" else "F"
-        url_index = f"https://www.joradp.dz/{base_path}/{annee}/{numero}/{langue_prefix}_Pag1.htm"
-        
-        # Compte les liens vers les pages PDF (AP1.pdf, AP2.pdf, etc.)
-        page_links = soup.find_all('a', href=re.compile(rf"{langue_prefix}\d+\.pdf"))
-        pages_count = len(page_links)
-        
-        return {
-            "url_index_historique": url_index,
-            "pages_attendues": pages_count if pages_count > 0 else None
-        }
-    
     def discover_annual_index(self, langue: str, annee: int) -> int:
         """
         Découvre tous les numéros pour une année et une langue données.
@@ -278,24 +244,11 @@ def discover_year(db_path: str = "joradp.db", annee: int = 2026, langue: str = "
     db = JoradpDatabase(db_path)
     with db:
         db.initialize_schema()
-    
+
     with JoradpClient() as client:
         discoverer = JoradpDiscoverer(db, client)
         count = discoverer.discover_annual_index(langue, annee)
         return count
-    
-    with JoradpClient() as client:
-        discoverer = JoradpDiscoverer(db, client)
-        count = discoverer.discover_annual_index(langue, annee)
-        print(f"\nTotal sources découvertes: {count}")
-        
-        # Rapport de couverture
-        report = discoverer.generate_coverage_report()
-        print(f"\nRapport de couverture:")
-        print(f"  Total sources: {report['total_sources']}")
-        print(f"  Téléchargées: {report['downloaded']}")
-        print(f"  Validées: {report['validated']}")
-        print(f"  Erreurs: {report['errors']}")
 
 
 if __name__ == "__main__":

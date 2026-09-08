@@ -1,16 +1,25 @@
+# Environnement
 .venv/
 __pycache__/
 *.py[cod]
+
+# Données volumineuses (non versionnées)
+downloads/
+Extraction/
+*.db
+*.part
+
+# Rapports et artefacts générés
 data/
 reports/
-downloads/
-*.db
+rapport_couverture.json
+journal_js.txt
+
+# Artefacts de diagnostic OCR / RTL
 *.png
 rtl_check_*.png
 rtl_validation/sample_*.png
 extraction_diagnosis/*.png
 extraction_diagnosis/*.txt
 extraction_diagnosis/*.json
-rapport_couverture.json
-journal_js.txt
 test_ar.db

@@ -72,9 +72,13 @@ class OptimizedDownloader:
         self.rate_limiter = get_global_rate_limiter()
         self._shutdown_flag = threading.Event()
         
-        # Setup graceful shutdown
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # Setup graceful shutdown (échoue si hors thread principal — sans gravité,
+        # l'arrêt gracieux n'est alors simplement pas disponible)
+        try:
+            signal.signal(signal.SIGINT, self._signal_handler)
+            signal.signal(signal.SIGTERM, self._signal_handler)
+        except ValueError:
+            pass
     
     def _signal_handler(self, signum, frame):
         """Gestionnaire de signal pour arrêt gracieux."""
@@ -189,9 +193,9 @@ class OptimizedDownloader:
                     error="Shutdown requested"
                 )
             
-            # Rate limiter global
-            self.rate_limiter.wait()
-            
+            # La cadence est assurée par le limiteur global partagé, appelé
+            # à l'intérieur de client.get() — pas de double attente ici.
+
             try:
                 response = self.client.get(url, retries=attempt)
                 
@@ -270,12 +274,12 @@ class OptimizedDownloader:
                 time.sleep(min(2 ** attempt, 60))
         
         # Échec après tous les retries
-        # Journalise l'erreur
+        # Journalise l'erreur (sans date de téléchargement : la source n'a pas été obtenue)
         with self.db:
             conn = self.db.connect()
             conn.execute("""
-                UPDATE sources 
-                SET statut = 'erreur', erreur = ?, date_telechargement = CURRENT_TIMESTAMP
+                UPDATE sources
+                SET statut = 'erreur', erreur = ?
                 WHERE id = ?
             """, (error, source_id))
             conn.commit()

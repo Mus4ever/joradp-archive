@@ -12,6 +12,8 @@ import truststore
 from typing import Optional
 from dataclasses import dataclass
 
+from rate_limiter import get_global_rate_limiter
+
 
 @dataclass
 class JoradpClientConfig:
@@ -28,7 +30,10 @@ class JoradpClient:
     
     def __init__(self, config: Optional[JoradpClientConfig] = None):
         self.config = config or JoradpClientConfig()
-        self._last_request_time = 0.0
+        # Limiteur global unique, partagé entre toutes les instances et workers
+        # (thread-safe). Utilisé à la fois par la découverte et le téléchargement
+        # pour garantir un seul compteur de cadence sur tout le pipeline.
+        self._rate_limiter = get_global_rate_limiter(self.config.min_delay)
         self._context = self._create_ssl_context()
         self._client: Optional[httpx.Client] = None
         
@@ -48,13 +53,8 @@ class JoradpClient:
         return context
     
     def _wait_for_rate_limit(self):
-        """Attend le délai minimum entre requêtes."""
-        now = time.time()
-        elapsed = now - self._last_request_time
-        if elapsed < self.config.min_delay:
-            sleep_time = self.config.min_delay - elapsed
-            time.sleep(sleep_time)
-        self._last_request_time = time.time()
+        """Attend le délai minimum via le limiteur global partagé (thread-safe)."""
+        self._rate_limiter.wait()
     
     def _get_client(self) -> httpx.Client:
         """Crée ou retourne le client httpx."""

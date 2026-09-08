@@ -57,3 +57,15 @@ Le livrable du projet est l’archive locale des PDF téléchargés, accompagné
 la base SQLite qui liste les sources, leur statut, leur taille, leur somme
 SHA-256 et les éventuelles erreurs. Aucune extraction de texte, OCR, image,
 benchmark ou métadonnée juridique ne fait partie de ce projet.
+
+## Statut final — septembre 2026
+
+Les phases 0 à 3 sont terminées : 10 432 / 10 432 PDF téléchargés, 0 erreur,
+intégrité SHA-256 vérifiée par re-téléchargement d'échantillons. Voir
+`docs/journal-phases.md` pour les preuves et mesures.
+
+L'extraction de texte, initialement hors périmètre de ce plan, a été réalisée
+hors dépôt (OCR Mistral pour les PDF scannés — FR 1962-2001 et tout l'AR —,
+extraction texte native pour les PDF numériques — FR 2002-2026) et son
+périmètre est documenté dans le `README.md`. Les sorties se trouvent dans
+`Extraction/` (non versionné).

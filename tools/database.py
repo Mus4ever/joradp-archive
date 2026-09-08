@@ -183,8 +183,10 @@ class JoradpDatabase:
             key = f"{annee}_{langue}"
             if key not in coverage:
                 coverage[key] = {"annee": annee, "langue": langue, "decouvert": 0, "telecharge": 0, "valide": 0, "erreur": 0}
-            
-            coverage[key][statut] = count
+
+            # Un statut inconnu ne doit pas faire planter le rapport :
+            # il est ajouté dynamiquement à la clé correspondante.
+            coverage[key][statut] = coverage[key].get(statut, 0) + count
         
         cursor.execute("SELECT COUNT(*) as total FROM sources")
         total = cursor.fetchone()["total"]
