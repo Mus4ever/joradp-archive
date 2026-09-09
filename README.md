@@ -27,8 +27,13 @@ en extrait le texte. Deux phases, toutes deux terminées :
 - `tools/http_client.py` : client HTTP avec contexte TLS compatible avec le
   serveur (truststore + renégociation legacy, vérification conservée).
 - `tools/rate_limiter.py` : limiteur de cadence global thread-safe.
+- `sources/coursupreme/` : scraper des décisions de la Cour suprême
+  ([coursupreme.dz](https://coursupreme.dz)) — voir
+  [`docs/coursupreme.md`](docs/coursupreme.md). Découverte, parsing HTML,
+  SQLite, rapport qualité ; 1 253 décisions uniques détectées.
 - `downloads/` : PDF téléchargés (non versionné).
 - `Extraction/` : sorties texte/OCR par numéro (non versionné).
+- `raw/` : HTML brut des décisions collectées (non versionné).
 
 ## Utilisation
 

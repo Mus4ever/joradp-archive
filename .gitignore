@@ -8,6 +8,8 @@ downloads/
 Extraction/
 *.db
 *.part
+raw/
+databases/
 
 # Rapports et artefacts générés
 data/
