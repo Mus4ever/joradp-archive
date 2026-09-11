@@ -21,6 +21,11 @@ ROOT = HERE.parents[2]
 sys.path.insert(0, str(HERE))
 sys.path.append(str(ROOT / "tools"))
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import pdfplumber  # noqa: E402
 
 from arabic_normalize import normalize_guide_text  # noqa: E402
@@ -136,12 +141,13 @@ def parse_page(page, log=None) -> list:
 
         cells = {}
         for f, ws in cell_words.items():
-            # regrouper par ligne y puis lire droite→gauche (RTL)
+            # regrouper par ligne y puis trier par ordre visuel gauche→droite (LTR)
+            # car normalize_guide_text applique visual_to_logical (conversion visuel→logique)
             lines = {}
             for w in ws:
                 lines.setdefault(round(w["top"] / 4), []).append(w)
             txt = "\n".join(
-                " ".join(w["text"] for w in sorted(l, key=lambda w: -w["x0"]))
+                " ".join(w["text"] for w in sorted(l, key=lambda w: w["x0"]))
                 for _, l in sorted(lines.items())
             )
             cells[f] = normalize_guide_text(txt) if txt else None
@@ -224,12 +230,17 @@ def main():
     ap = argparse.ArgumentParser(description="Parse guide → revue_index")
     ap.add_argument("--guide", choices=["v4", "v3"], default="v4")
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--clean", action="store_true", help="Vider revue_index avant insertion")
     args = ap.parse_args()
 
     pdf_path = GUIDES[args.guide]
     store = RevueStore()
     t0 = time.time()
     with store:
+        if args.clean:
+            store.connect().execute("DELETE FROM revue_index")
+            store.connect().commit()
+            print("Table revue_index réinitialisée (--clean).")
         stats = parse_guide(pdf_path, store, max_pages=args.limit)
         print(f"Pages: {stats['pages']} | entrées: {stats['entrees']} "
               f"(ok {stats['ok']}, partial {stats['partial']}, error {stats['error']})")

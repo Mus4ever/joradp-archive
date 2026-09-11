@@ -1,0 +1,122 @@
+{
+  "robots": "User-agent: ChatGPT-User\nDisallow: /\n",
+  "categories": {
+    "themes": {
+      "url": "https://coursupreme.dz/قرارات-مصنفة-حسب-المواضيع/",
+      "http": 200,
+      "decision_links_on_page": 81,
+      "pagination_links": [],
+      "max_page_seen": null
+    },
+    "penales": {
+      "url": "https://coursupreme.dz/الغرف-الجزائية/",
+      "http": 200,
+      "decision_links_on_page": 52,
+      "pagination_links": [],
+      "max_page_seen": null
+    },
+    "civiles": {
+      "url": "https://coursupreme.dz/الغرف-المدنية/",
+      "http": 200,
+      "decision_links_on_page": 12,
+      "pagination_links": [],
+      "max_page_seen": null
+    },
+    "indemnisation": {
+      "url": "https://coursupreme.dz/لجنة-التعويض/",
+      "http": 200,
+      "decision_links_on_page": 18,
+      "pagination_links": [],
+      "max_page_seen": null
+    },
+    "reunies": {
+      "url": "https://coursupreme.dz/الغرف-الاجتماعية/",
+      "error": "fetch failed"
+    },
+    "importantes": {
+      "url": "https://coursupreme.dz/قرارات-مهمة/",
+      "http": 200,
+      "decision_links_on_page": 19,
+      "pagination_links": [],
+      "max_page_seen": null
+    }
+  },
+  "decision_samples": [
+    {
+      "category": "themes",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-00001-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-07-17-2019/",
+      "http": 200,
+      "bytes": 124590,
+      "saved": "decision_ملف-رقم-00001-قرار-بتاريخ-07-17-2019.html"
+    },
+    {
+      "category": "themes",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-009536-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-2020-01-15/",
+      "http": 200,
+      "bytes": 123529,
+      "saved": "decision_ملف-رقم-009536-قرار-بتاريخ-2020-01-15.html"
+    },
+    {
+      "category": "penales",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-1520730-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-2021-12-23/",
+      "http": 200,
+      "bytes": 124011,
+      "saved": "decision_ملف-رقم-1520730-قرار-بتاريخ-2021-12-23.html"
+    },
+    {
+      "category": "penales",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-0985112-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-2021-02-11/",
+      "http": 200,
+      "bytes": 122524,
+      "saved": "decision_ملف-رقم-0985112-قرار-بتاريخ-2021-02-11.html"
+    },
+    {
+      "category": "civiles",
+      "url": "https://coursupreme.dz/decision/%d8%a7%d9%84%d9%82%d8%b1%d8%a7%d8%b1-%d8%b1%d9%82%d9%85-007799-%d8%a7%d9%84%d9%85%d8%a4%d8%b1%d8%ae-%d9%81%d9%8a-13-01-2016/",
+      "http": 200,
+      "bytes": 123831,
+      "saved": "decision_القرار-رقم-007799-المؤرخ-في-13-01-2016.html"
+    },
+    {
+      "category": "civiles",
+      "url": "https://coursupreme.dz/decision/%d8%a7%d9%84%d9%82%d8%b1%d8%a7%d8%b1-%d8%b1%d9%82%d9%85-1040786-%d8%a7%d9%84%d9%85%d8%a4%d8%b1%d8%ae-%d9%81%d9%8a-14-10-2015/",
+      "http": 200,
+      "bytes": 123827,
+      "saved": "decision_القرار-رقم-1040786-المؤرخ-في-14-10-2015.html"
+    },
+    {
+      "category": "indemnisation",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-009701-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-11-11-2020/",
+      "http": 200,
+      "bytes": 125344,
+      "saved": "decision_ملف-رقم-009701-قرار-بتاريخ-11-11-2020.html"
+    },
+    {
+      "category": "indemnisation",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-009375-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-2019-10-09/",
+      "http": 200,
+      "bytes": 120923,
+      "saved": "decision_ملف-رقم-009375-قرار-بتاريخ-2019-10-09.html"
+    },
+    {
+      "category": "importantes",
+      "url": "https://coursupreme.dz/decision/%d9%85%d9%84%d9%81-%d8%b1%d9%82%d9%85-00004-%d9%82%d8%b1%d8%a7%d8%b1-%d8%a8%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae-28-03-2021/",
+      "http": 200,
+      "bytes": 128517,
+      "saved": "decision_ملف-رقم-00004-قرار-بتاريخ-28-03-2021.html"
+    }
+  ],
+  "homepage": {
+    "internal_links": 75,
+    "decision_links": [
+      "https://coursupreme.dz/decision/ملف-رقم-1024969-قرار-بتاريخ-19-05-2022/",
+      "https://coursupreme.dz/decision/ملف-رقم-1517023-قرار-بتاريخ-28-04-2022/",
+      "https://coursupreme.dz/decision/ملف-رقم-1619506-قرار-بتاريخ-24-11-2022/"
+    ],
+    "page_links": []
+  },
+  "pagination_check": {
+    "url": "https://coursupreme.dz/الغرف-المدنية/page/2/",
+    "decisions_on_page2": 42
+  }
+}

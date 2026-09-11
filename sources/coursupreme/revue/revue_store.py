@@ -58,6 +58,35 @@ CREATE TABLE IF NOT EXISTS revue_index (
 CREATE INDEX IF NOT EXISTS idx_ri_number ON revue_index(decision_number);
 CREATE INDEX IF NOT EXISTS idx_ri_issue ON revue_index(issue_year, issue_number);
 CREATE INDEX IF NOT EXISTS idx_ri_status ON revue_index(parser_status);
+
+CREATE TABLE IF NOT EXISTS revue_decision_texts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    decision_id INTEGER NOT NULL REFERENCES revue_decisions(id),
+    full_text TEXT,
+    pdf_start_page INTEGER,
+    pdf_end_page INTEGER,
+    page_count INTEGER,
+    offset_used INTEGER,
+    offset_confidence TEXT,
+    offset_method TEXT,
+    char_count INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(decision_id)
+);
+CREATE INDEX IF NOT EXISTS idx_rdt_decision ON revue_decision_texts(decision_id);
+
+CREATE TABLE IF NOT EXISTS revue_offsets (
+    issue_year INTEGER NOT NULL,
+    issue_number INTEGER NOT NULL,
+    offset_value INTEGER NOT NULL DEFAULT 0,
+    confidence TEXT,
+    method TEXT,
+    samples INTEGER,
+    total_samples INTEGER,
+    consensus_pct REAL,
+    computed_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (issue_year, issue_number)
+);
 """
 
 

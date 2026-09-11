@@ -1,0 +1,74 @@
+# Liste Prioritaire des Fichiers OCR à Ré-Océriser (Classe B)
+
+> Fichiers ayant un grand nombre d articles orphelins (titres d actes coupés ou colonnes interverties dans l OCR original).
+
+| Rang | Langue | Année | Numéro JO | Fichier Markdown | Articles Orphelins | Capturés / Physiques |
+|---|---|---|---|---|---|---|
+| 1 | FR | 2010 | 037 | Extraction\OCR-Fr\2010\FR2010037.pdf\markdown.md | **316** | 8 / 324 |
+| 2 | AR | 2010 | 037 | Extraction\OCR-Ar\2010\AR2010037.pdf\markdown.md | **316** | 9 / 325 |
+| 3 | AR | 1980 | 028 | Extraction\OCR-Ar\1980\AR1980028.pdf\markdown.md | **307** | 0 / 307 |
+| 4 | AR | 1965 | 100 | Extraction\OCR-Ar\1965\AR1965100.pdf\markdown.md | **259** | 0 / 259 |
+| 5 | AR | 1979 | 014 | Extraction\OCR-Ar\1979\AR1979014.pdf\markdown.md | **189** | 0 / 189 |
+| 6 | AR | 2019 | 066 | Extraction\OCR-Ar\2019\AR2019066.pdf\markdown.md | **174** | 17 / 191 |
+| 7 | AR | 2014 | 034 | Extraction\OCR-Ar\2014\AR2014034.pdf\markdown.md | **162** | 48 / 210 |
+| 8 | AR | 2017 | 049 | Extraction\OCR-Ar\2017\AR2017049.pdf\markdown.md | **142** | 9 / 151 |
+| 9 | AR | 1997 | 053 | Extraction\OCR-Ar\1997\AR1997053.pdf\markdown.md | **132** | 0 / 132 |
+| 10 | AR | 1979 | 008 | Extraction\OCR-Ar\1979\AR1979008.pdf\markdown.md | **126** | 0 / 126 |
+| 11 | AR | 1964 | 006 | Extraction\OCR-Ar\1964\AR1964006.pdf\markdown.md | **124** | 54 / 178 |
+| 12 | AR | 1967 | 006 | Extraction\OCR-Ar\1967\AR1967006.pdf\markdown.md | **114** | 174 / 288 |
+| 13 | AR | 1998 | 008 | Extraction\OCR-Ar\1998\AR1998008.pdf\markdown.md | **110** | 0 / 110 |
+| 14 | AR | 1999 | 084 | Extraction\OCR-Ar\1999\AR1999084.pdf\markdown.md | **99** | 0 / 99 |
+| 15 | AR | 2000 | 046 | Extraction\OCR-Ar\2000\AR2000046.pdf\markdown.md | **87** | 0 / 87 |
+| 16 | FR | 1962 | 910 | Extraction\OCR-Fr\1962\FR1962910.pdf\markdown.md | **84** | 79 / 163 |
+| 17 | AR | 1966 | 046 | Extraction\OCR-Ar\1966\AR1966046.pdf\markdown.md | **81** | 218 / 299 |
+| 18 | AR | 1989 | 052 | Extraction\OCR-Ar\1989\AR1989052.pdf\markdown.md | **72** | 129 / 201 |
+| 19 | AR | 1981 | 038 | Extraction\OCR-Ar\1981\AR1981038.pdf\markdown.md | **71** | 169 / 240 |
+| 20 | AR | 1994 | 061 | Extraction\OCR-Ar\1994\AR1994061.pdf\markdown.md | **71** | 136 / 207 |
+| 21 | FR | 1989 | 052 | Extraction\OCR-Fr\1989\FR1989052.pdf\markdown.md | **69** | 132 / 201 |
+| 22 | FR | 1993 | 034 | Extraction\OCR-Fr\1993\FR1993034.pdf\markdown.md | **66** | 57 / 123 |
+| 23 | FR | 1994 | 061 | Extraction\OCR-Fr\1994\FR1994061.pdf\markdown.md | **66** | 139 / 205 |
+| 24 | FR | 2014 | 006 | Extraction\OCR-Fr\2014\FR2014006.pdf\markdown.md | **64** | 52 / 116 |
+| 25 | FR | 1962 | 019 | Extraction\OCR-Fr\1962\FR1962019.pdf\markdown.md | **63** | 387 / 450 |
+| 26 | AR | 1965 | 001 | Extraction\OCR-Ar\1965\AR1965001.pdf\markdown.md | **62** | 0 / 62 |
+| 27 | FR | 1974 | 083 | Extraction\OCR-Fr\1974\FR1974083.pdf\markdown.md | **61** | 50 / 111 |
+| 28 | AR | 2016 | 006 | Extraction\OCR-Ar\2016\AR2016006.pdf\markdown.md | **59** | 32 / 91 |
+| 29 | FR | 2017 | 013 | Extraction\OCR-Fr\2017\FR2017013.pdf\markdown.md | **58** | 74 / 132 |
+| 30 | AR | 2017 | 013 | Extraction\OCR-Ar\2017\AR2017013.pdf\markdown.md | **58** | 76 / 134 |
+| 31 | FR | 2005 | 054 | Extraction\OCR-Fr\2005\FR2005054.pdf\markdown.md | **52** | 45 / 97 |
+| 32 | FR | 1974 | 080 | Extraction\OCR-Fr\1974\FR1974080.pdf\markdown.md | **48** | 62 / 110 |
+| 33 | FR | 1990 | 032 | Extraction\OCR-Fr\1990\FR1990032.pdf\markdown.md | **48** | 82 / 130 |
+| 34 | AR | 2022 | 075 | Extraction\OCR-Ar\2022\AR2022075.pdf\markdown.md | **47** | 89 / 136 |
+| 35 | FR | 2024 | 036 | Extraction\OCR-Fr\2024\FR2024036.pdf\markdown.md | **45** | 63 / 108 |
+| 36 | AR | 1969 | 082 | Extraction\OCR-Ar\1969\AR1969082.pdf\markdown.md | **43** | 247 / 290 |
+| 37 | AR | 1964 | 026 | Extraction\OCR-Ar\1964\AR1964026.pdf\markdown.md | **38** | 56 / 94 |
+| 38 | FR | 2023 | 060 | Extraction\OCR-Fr\2023\FR2023060.pdf\markdown.md | **33** | 30 / 63 |
+| 39 | AR | 1974 | 013 | Extraction\OCR-Ar\1974\AR1974013.pdf\markdown.md | **33** | 53 / 86 |
+| 40 | FR | 2002 | 080 | Extraction\OCR-Fr\2002\FR2002080.pdf\markdown.md | **27** | 55 / 82 |
+| 41 | AR | 1968 | 089 | Extraction\OCR-Ar\1968\AR1968089.pdf\markdown.md | **27** | 52 / 79 |
+| 42 | AR | 1992 | 009 | Extraction\OCR-Ar\1992\AR1992009.pdf\markdown.md | **27** | 37 / 64 |
+| 43 | AR | 1970 | 057 | Extraction\OCR-Ar\1970\AR1970057.pdf\markdown.md | **26** | 54 / 80 |
+| 44 | FR | 1964 | 020 | Extraction\OCR-Fr\1964\FR1964020.pdf\markdown.md | **25** | 75 / 100 |
+| 45 | FR | 1971 | 054 | Extraction\OCR-Fr\1971\FR1971054.pdf\markdown.md | **24** | 105 / 129 |
+| 46 | FR | 1975 | 053 | Extraction\OCR-Fr\1975\FR1975053.pdf\markdown.md | **23** | 194 / 217 |
+| 47 | FR | 1977 | 057 | Extraction\OCR-Fr\1977\FR1977057.pdf\markdown.md | **22** | 16 / 38 |
+| 48 | FR | 1997 | 020 | Extraction\OCR-Fr\1997\FR1997020.pdf\markdown.md | **22** | 13 / 35 |
+| 49 | FR | 1975 | 103 | Extraction\OCR-Fr\1975\FR1975103.pdf\markdown.md | **21** | 60 / 81 |
+| 50 | AR | 1968 | 105 | Extraction\OCR-Ar\1968\AR1968105.pdf\markdown.md | **21** | 75 / 96 |
+| 51 | FR | 1964 | 009 | Extraction\OCR-Fr\1964\FR1964009.pdf\markdown.md | **20** | 75 / 95 |
+| 52 | AR | 2013 | 027 | Extraction\OCR-Ar\2013\AR2013027.pdf\markdown.md | **18** | 63 / 81 |
+| 53 | FR | 1971 | 079 | Extraction\OCR-Fr\1971\FR1971079.pdf\markdown.md | **17** | 57 / 74 |
+| 54 | FR | 1973 | 028 | Extraction\OCR-Fr\1973\FR1973028.pdf\markdown.md | **17** | 11 / 28 |
+| 55 | AR | 1968 | 049 | Extraction\OCR-Ar\1968\AR1968049.pdf\markdown.md | **17** | 53 / 70 |
+| 56 | FR | 1970 | 078 | Extraction\OCR-Fr\1970\FR1970078.pdf\markdown.md | **15** | 56 / 71 |
+| 57 | FR | 1995 | 009 | Extraction\OCR-Fr\1995\FR1995009.pdf\markdown.md | **15** | 4 / 19 |
+| 58 | AR | 1965 | 008 | Extraction\OCR-Ar\1965\AR1965008.pdf\markdown.md | **15** | 9 / 24 |
+| 59 | FR | 1974 | 050 | Extraction\OCR-Fr\1974\FR1974050.pdf\markdown.md | **14** | 44 / 58 |
+| 60 | FR | 1973 | 038 | Extraction\OCR-Fr\1973\FR1973038.pdf\markdown.md | **13** | 0 / 13 |
+| 61 | AR | 1971 | 101 | Extraction\OCR-Ar\1971\AR1971101.pdf\markdown.md | **12** | 99 / 111 |
+| 62 | FR | 1973 | 046 | Extraction\OCR-Fr\1973\FR1973046.pdf\markdown.md | **11** | 26 / 37 |
+| 63 | AR | 1967 | 083 | Extraction\OCR-Ar\1967\AR1967083.pdf\markdown.md | **11** | 55 / 66 |
+| 64 | FR | 1997 | 084 | Extraction\OCR-Fr\1997\FR1997084.pdf\markdown.md | **10** | 14 / 24 |
+| 65 | AR | 1973 | 020 | Extraction\OCR-Ar\1973\AR1973020.pdf\markdown.md | **10** | 73 / 83 |
+| 66 | AR | 1976 | 022 | Extraction\OCR-Ar\1976\AR1976022.pdf\markdown.md | **10** | 83 / 93 |
+| 67 | AR | 1976 | 097 | Extraction\OCR-Ar\1976\AR1976097.pdf\markdown.md | **10** | 18 / 28 |
+| 68 | AR | 2007 | 031 | Extraction\OCR-Ar\2007\AR2007031.pdf\markdown.md | **10** | 152 / 162 |

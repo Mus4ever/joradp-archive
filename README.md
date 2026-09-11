@@ -1,64 +1,100 @@
-# Archive et extraction du Journal officiel algérien (JORADP)
+# Archive et Corpus Juridique Algérien (Lois & Jurisprudence)
 
-Ce projet constitue l'archive locale complète des PDF du Journal officiel
-algérien ([joradp.dz](https://www.joradp.dz)) en français et en arabe, puis
-en extrait le texte. Deux phases, toutes deux terminées :
+Ce repository héberge l'infrastructure complète d'archivage, d'extraction OCR, de structuration et d'unification du corpus juridique algérien (législation et jurisprudence).
 
-1. **Archivage** — découverte et téléchargement des 10 432 PDF
-   (FR 1962-2026 : 5 302 numéros ; AR 1964-2026 : 5 130 numéros ; 8,4 Go),
-   avec suivi SQLite et vérification SHA-256.
-2. **Extraction de texte** — sortie Markdown de chaque numéro dans
-   `Extraction/`, selon deux méthodes selon la nature des PDF :
-   - **OCR Mistral** (PDF scannés) : FR 1962-2001 et tout l'AR (1964-2026) ;
-     sortie par page (`markdown.md`, `header.md`, `page-metadata.json` avec
-     blocs et coordonnées) ;
-   - **Extraction texte native** (PDF numériques avec texte embarqué) :
-     FR 2002-2026 ; sortie par numéro (`{langue}{année}{numéro}.md` + `.json`).
+Il constitue le socle documentaire canonique préparatoire à la création d'un futur **Small Language Model (SLM)** spécialisé en droit algérien.
 
-## Contenu
+---
 
-- `SITE_STRUCTURE.md` : structure du site joradp.dz constatée et validée.
-- `docs/journal-phases.md` : journal complet des phases (preuves, mesures,
-  décisions, corrections).
-- `tools/discover.py` : découverte des liens PDF depuis les index annuels.
-- `tools/download_optimized.py` : téléchargement reprenable et validé des PDF.
-- `tools/database.py` : suivi SQLite des sources, statuts, tailles, sommes
-  SHA-256 et erreurs.
-- `tools/http_client.py` : client HTTP avec contexte TLS compatible avec le
-  serveur (truststore + renégociation legacy, vérification conservée).
-- `tools/rate_limiter.py` : limiteur de cadence global thread-safe.
-- `sources/coursupreme/` : scraper des décisions de la Cour suprême
-  ([coursupreme.dz](https://coursupreme.dz)) — voir
-  [`docs/coursupreme.md`](docs/coursupreme.md). Découverte, parsing HTML,
-  SQLite, rapport qualité ; 1 253 décisions uniques détectées.
-- `downloads/` : PDF téléchargés (non versionné).
-- `Extraction/` : sorties texte/OCR par numéro (non versionné).
-- `raw/` : HTML brut des décisions collectées (non versionné).
+## 1. État Actuel du Corpus (`databases/corpus.db`)
 
-## Utilisation
+À l'issue de l'intégration et de la validation de septembre 2026, la base de données unifiée rassemble **236 090 documents** et **853 500 articles** :
 
-Installer les dépendances dans l'environnement virtuel puis initialiser la
-base et lancer la découverte :
+| Source Documentaire | Nature Juridique | Documents | Complétude & Particularités | Base Staging |
+|---|---|---:|---|---|
+| **JORADP (Journal Officiel)** | Législation (`LEGISLATIVE_NORM`) | **231 234** | Lois, ordonnances, décrets, arrêtés (1962–2026). Découpés en **853 500 articles**. | `joradp.db` |
+| **Cour Suprême (HTML)** | Jurisprudence (`JUDICIAL_DECISION`) | **1 253** | Arrêts récents (1979–2023, pic 2016-18) avec texte intégral et métadonnées riches. | `databases/coursupreme.db` |
+| **Cour Suprême (Revue)** | Jurisprudence (`JUDICIAL_DECISION`) | **3 274** | Décisions de 1989 à 2023 (1 955 modernes + 1 319 legacy associées à l'OCR). | `databases/coursupreme_revue.db` |
+| **Conseil d'État** | Jurisprudence administrative | **328** | Arrêts du contentieux administratif (1998–2022) issus des fiches et PDF. | `databases/conseildetat.db` |
+| **Conseil d'État (Revue)** | Doctrine (`DOCTRINE_REVIEW`) | **1** | Publication doctrinale de la revue du Conseil d'État (2015). | `databases/conseildetat.db` |
+| **TOTAL** | — | **236 090** | **853 500 articles** & **146 relations inter-sources** vérifiées | `databases/corpus.db` |
 
-```powershell
+---
+
+## 2. Architecture et Organisation du Dépôt
+
+```
+joradp-archive/
+├── README.md                           ← Synthèse et vue d'ensemble du projet
+├── Project_Plan.md                     ← Cahier des charges et historique initial
+├── CHANGELOG.md                        ← Journal des évolutions techniques
+├── requirements.txt                    ← Dépendances Python versionnées
+│
+├── corpus/                             ← Couche canonique et adaptateurs unifiés
+│   ├── models.py                       ← Classes CanonicalDocument, DocumentProvenance, Article
+│   ├── schema.py                       ← Schéma relationnel CorpusDB (SQLite WAL)
+│   ├── joradp_parser.py                ← Découpage des JO en actes et articles
+│   ├── coursupreme_adapter.py          ← Adaptateur Cour suprême HTML
+│   ├── coursupreme_revue_adapter.py    ← Adaptateur Cour suprême Revue
+│   └── conseildetat_adapter.py         ← Adaptateur Conseil d'État
+│
+├── sources/                            ← Outils de scraping et staging par institution
+│   ├── coursupreme/                    ← Collecte et parsing des fiches HTML
+│   │   └── revue/                      ← Gestion des PDF, OCR, Guide v4 et offsets de la Revue
+│   └── conseildetat/                   ← Collecte et parsing Drupal / PDF du Conseil d'État
+│
+├── databases/                          ← Bases SQLite (fichiers volumineux ignorés par Git)
+│   ├── corpus.db                       ← Base de données unifiée cible (2,04 Go)
+│   ├── coursupreme.db                  ← Staging Cour suprême HTML (11,38 Mo)
+│   ├── coursupreme_revue.db            ← Staging Revue Cour suprême (37,46 Mo)
+│   └── conseildetat.db                 ← Staging Conseil d'État (1,08 Mo)
+│
+├── docs/                               ← Documentation technique de référence
+│   ├── architecture/                   ← Architecture actuelle et diagrammes de flux
+│   ├── data/                           ← Dictionnaire de données des tables et champs
+│   ├── methodology/                    ← Guide de reproductibilité pas à pas
+│   └── jurisprudence/                  ← Rapports de reconnaissance des juridictions
+│
+├── tests/                              ← Suite de 96 tests unitaires et d'intégration
+├── tools/                              ← Outils d'infrastructure (rate limiter, explorer web)
+└── reports/                            ← Rapports d'audits et historiques de projet
+```
+
+---
+
+## 3. Prise en Main et Exécution
+
+### Installation
+```bash
 pip install -r requirements.txt
-python tools/database.py
-python tools/discover.py --all
-python tools/download_optimized.py
 ```
 
-Le client applique un délai minimal de 2 secondes entre les requêtes, un
-User-Agent explicite et trois tentatives avec backoff exponentiel afin de ne
-pas surcharger le site source.
-
-Lancer les tests :
-
-```powershell
-pytest
+### Lancer la Suite de Tests (96 tests)
+```bash
+python -m pytest tests/
 ```
 
-## État d'avancement de l'extraction
+### Explorer le Corpus Localement
+Un dashboard web interactif permet de naviguer dans l'ensemble des 236 090 textes juridiques :
+```bash
+python tools/explorer_server.py
+```
+Puis accédez à [http://localhost:8501](http://localhost:8501).
 
-Couverture complète (10 432 / 10 432 numéros). Seul résidu connu : 60 fichiers
-`.json` de métadonnées manquants sur les extractions natives FR 2002-2026
-(les `.md` de texte sont présents à 100 %).
+---
+
+## 4. Ce qui est Fait vs Ce qui Reste à Faire
+
+### Réalisé et Validé :
+- Collecte et extraction des 10 432 numéros du Journal officiel (1962–2026).
+- Scraping et structuration des 1 253 décisions HTML de la Cour suprême.
+- Traitement de la Revue de la Cour suprême (80 numéros, 32 065 pages OCR, correction bidi du Guide, résolution des offsets).
+- Scraping et structuration des 329 documents du Conseil d'État.
+- Conception du modèle canonique unifié avec traçabilité intégrale (`DocumentProvenance`).
+- Ingestion sans perte ni doublon dans `databases/corpus.db` avec intégrité SQLite vérifiée.
+
+### Travaux Futurs (Hors Scope Actuel) :
+- **Génération du dataset de fine-tuning** (paires d'instructions, questions-réponses juridiques, raisonnement).
+- **Anonymisation ciblée** des mentions de personnes physiques identifiables dans les revues anciennes.
+- **Entraînement du modèle (SLM)** (SFT, LoRA/QLoRA).
+- **Architecture d'inférence** (validation des citations, discussion sur l'architecture multi-agent / RAG avec le professeur).

@@ -10,18 +10,16 @@ Extraction/
 *.part
 raw/
 databases/
+logs/
 
-# Rapports et artefacts générés
+# Artefacts volumineux et données OCR locales
 data/
-reports/
-rapport_couverture.json
-journal_js.txt
+reports/*.json
+scratch/
 
 # Artefacts de diagnostic OCR / RTL
 *.png
 rtl_check_*.png
 rtl_validation/sample_*.png
-extraction_diagnosis/*.png
-extraction_diagnosis/*.txt
-extraction_diagnosis/*.json
+extraction_diagnosis/
 test_ar.db

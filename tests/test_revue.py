@@ -53,6 +53,35 @@ def test_normalize_non_destructif():
     assert out == "مُحَكَّمة"
 
 
+def test_guide_cell_bidi_direction():
+    # Test de non-régression bidi sur fixture représentative du guide:
+    # Les tokens de mots extraits dans le PDF apparaissent dans l'ordre visuel (LTR).
+    # Lorsqu'ils sont combinés LTR puis passés dans normalize_guide_text,
+    # la phrase arabe résultante doit être dans le sens logique correct (sujet/verbe au début).
+    words_ltr = [
+        {"text": "مﻬﺗﺎﺑﻠط", "x0": 100},
+        {"text": "ﻰﻠﻋ", "x0": 120},
+        {"text": "درﻟاو", "x0": 130},
+        {"text": "فرا طﻷا", "x0": 150},
+        {"text": "عوﻓد", "x0": 170},
+        {"text": "ﻰﻟإ", "x0": 190},
+        {"text": "بﯾﺟﺗﺳﯾ", "x0": 210},
+        {"text": "ﻻ", "x0": 230},
+        {"text": "يذﻟا", "x0": 240},
+        {"text": "ررا ﻘﻟا", "x0": 260},
+        {"text": "،بﯾﺑﺳﺗﻟا", "x0": 290},
+        {"text": "ﻲﻓ", "x0": 320},
+        {"text": "را ﺻﺎﻗ", "x0": 340},
+        {"text": "دﻌﯾ", "x0": 370},
+    ]
+    txt = " ".join(w["text"] for w in sorted(words_ltr, key=lambda w: w["x0"]))
+    result = normalize_guide_text(txt)
+    # En ordre logique, la phrase commence par 'یعد قاص ار في التسبیب'
+    assert result.startswith("یعد قاص")
+    assert result.endswith("على طلباتهم")
+
+
+
 # --- Matching (Phase 7) -------------------------------------------------------
 
 HTML_INDEX = {

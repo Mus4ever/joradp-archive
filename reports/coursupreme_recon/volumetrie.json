@@ -1,0 +1,41 @@
+{
+  "themes": {
+    "url": "https://coursupreme.dz/قرارات-مصنفة-حسب-المواضيع/",
+    "http": 200,
+    "pages": 18,
+    "unique_decisions": 1253
+  },
+  "penales": {
+    "url": "https://coursupreme.dz/الغرف-الجزائية/",
+    "http": 200,
+    "pages": 10,
+    "unique_decisions": 389
+  },
+  "civiles": {
+    "url": "https://coursupreme.dz/الغرف-المدنية/",
+    "http": 200,
+    "pages": 19,
+    "unique_decisions": 805
+  },
+  "indemnisation": {
+    "url": "https://coursupreme.dz/لجنة-التعويض/",
+    "http": 200,
+    "pages": 3,
+    "unique_decisions": 35
+  },
+  "reunies": {
+    "url": "https://coursupreme.dz/الغرف-المجتمعة/",
+    "http": 200,
+    "pages": 1,
+    "unique_decisions": 7
+  },
+  "importantes": {
+    "url": "https://coursupreme.dz/قرارات-مهمة/",
+    "http": 200,
+    "pages": 2,
+    "unique_decisions": 25
+  },
+  "_TOTAL": {
+    "unique_decisions_toutes_categories": 1253
+  }
+}

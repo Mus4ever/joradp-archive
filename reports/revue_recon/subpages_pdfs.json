@@ -1,0 +1,72 @@
+{
+  "revue_special_civil": {
+    "page": "https://coursupreme.dz/مجلة-المحكمة-العليـا-عدد-خاص-المسوؤلي-2/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2020/11/Revue-Cour-supreme.pdf"
+    ]
+  },
+  "guide_recherche_v4": {
+    "page": "https://coursupreme.dz/دليل-البحث-في-مجلة-المحكمة-العليـا-الط-2/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2025/05/دليل-البحث-الطبعة-الرابعة.pdf"
+    ]
+  },
+  "guide_indemnisation_v2": {
+    "page": "https://coursupreme.dz/دليل-قرارات-لجنة-التعويض-المنشورة-في-م-2/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2025/05/%D8%AF%D9%84%D9%8A%D9%84-%D9%82%D8%B1%D8%A7%D8%B1%D8%A7%D8%AA-%D9%84%D8%AC%D9%86%D8%A9-%D8%A7%D9%84%D8%AA%D8%B9%D9%88%D9%8A%D8%B6-%D8%A7%D9%84%D8%B7%D8%A8%D8%B9%D8%A9-%D8%A7%D9%84%D8%AB%D8%A7%D9%86%D9%8A%D8%A9.pdf"
+    ]
+  },
+  "revue_2023_01": {
+    "page": "https://coursupreme.dz/مجلة-المحكمة-العليــا-العدد-01-2023/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2023/01/%D8%A7%D9%84%D9%85%D8%AC%D9%84%D8%A9-%D8%A7%D9%84%D9%85%D8%AD%D9%83%D9%85%D8%A9-%D8%A7%D9%84%D8%B9%D9%84%D9%8A%D8%A71-2023_0.pdf"
+    ]
+  },
+  "revue_2022_02": {
+    "page": "https://coursupreme.dz/مجلة-المحكمة-العليــا-العدد-02-2022/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2022/02/%D8%A7%D9%84%D9%85%D8%AC%D9%84%D8%A9-%D8%A7%D9%84%D9%85%D8%AD%D9%83%D9%85%D8%A9-%D8%A7%D9%84%D8%B9%D9%84%D9%8A%D8%A72-2022_0.pdf"
+    ]
+  },
+  "revue_2022_01": {
+    "page": "https://coursupreme.dz/مجلة-المحكمة-العليــا-العدد-01-2022/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2022/01/المجلة-المحكمة-العليا1-2022.pdf"
+    ]
+  },
+  "revue_special_role": {
+    "page": "https://coursupreme.dz/مجلة-المحكمة-العليـا-عدد-خاص-دور-التش/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2022/01/%D8%B9%D8%AF%D8%AF-%D8%AE%D8%A7%D8%B5-%D8%AD%D9%88%D9%84-%D8%AF%D9%88%D8%B1-%D8%A7%D9%84%D8%AA%D8%B4%D8%B1%D9%8A%D8%B9-%D9%88%D8%A7%D9%84%D9%81%D9%82%D9%87-%D9%88%D8%A7%D9%84%D8%A7%D8%AC%D8%AA%D9%87%D8%A7%D8%AF-%D8%A7%D9%84%D9%82%D8%B6%D8%A7%D8%A6%D9%8A-%D9%81%D9%8A-%D8%AA%D8%B7%D9%88%D9%8A%D8%B1-%D8%A7%D9%84%D9%82%D8%A7%D9%86%D9%88%D9%86_1.pdf"
+    ]
+  },
+  "guide_recherche_v3": {
+    "page": "https://coursupreme.dz/دليل-البحث-في-مجلة-المحكمة-العليـا-الط/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2022/01/%D8%AF%D9%84%D9%8A%D9%84-%D8%A7%D9%84%D8%A8%D8%AD%D8%AB-%D8%A7%D9%84%D8%B7%D8%A8%D8%B9%D8%A9-%D8%A7%D9%84%D8%AB%D8%A7%D9%84%D8%AB%D8%A9.pdf"
+    ]
+  },
+  "guide_indemnisation_v1": {
+    "page": "https://coursupreme.dz/دليل-قرارات-لجنة-التعويض-المنشورة-في-م/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2024/12/%D8%AF%D9%84%D9%8A%D9%84-%D9%82%D8%B1%D8%A7%D8%B1%D8%A7%D8%AA-%D9%84%D8%AC%D9%86%D8%A9-%D8%A7%D9%84%D8%AA%D8%B9%D9%88%D9%8A%D8%B6-%D8%A7%D9%84%D8%B7%D8%A8%D8%B9%D8%A9-%D8%A7%D9%84%D8%A3%D9%88%D9%84%D9%89.pdf"
+    ]
+  },
+  "revue_2021_02": {
+    "page": "https://coursupreme.dz/مجلة-المحكمة-العليا-العدد-02-2021/",
+    "http": 200,
+    "pdfs": [
+      "https://coursupreme.dz/wp-content/uploads/2024/12/2021-02.pdf"
+    ]
+  }
+}
